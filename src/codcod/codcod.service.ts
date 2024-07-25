@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { Observable } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
-import { AxiosResponse } from 'axios';
 
 @Injectable()
 export class CodcodService {
+
   private readonly logger = new Logger(CodcodService.name);
   private readonly baseURL: string;
 
@@ -13,65 +12,40 @@ export class CodcodService {
     this.baseURL = process.env.CODCOD_API_URL;
   }
 
-  async getUpdatedItems(lastUpdateTime: string, storeId: string): Promise<AxiosResponse<any>> {
+  async getUpdatedItems(lastUpdateTime: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getUpdatedItems`;
     return this.httpService.get(url, {
-      params: {
-        dt: lastUpdateTime,
-        storeId,
-      },
+      params: { dt: lastUpdateTime, storeId },
     }).toPromise();
   }
 
-  async getUpdatedPromos(lastUpdateTime: string, storeId: string): Promise<AxiosResponse<any>> {
+  async getUpdatedPromos(lastUpdateTime: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getUpdatedPromos`;
     return this.httpService.get(url, {
-      params: {
-        dt: lastUpdateTime,
-        storeId,
-      },
+      params: { dt: lastUpdateTime, storeId },
     }).toPromise();
   }
 
-  async getBranchItems(storeId: string): Promise<AxiosResponse<any>> {
-    const url = `${this.baseURL}/getBranchItems`;
-    return this.httpService.get(url, {
-      params: { storeId },
-    }).toPromise();
-  }
-
-  async getItemSign(itemId: string, size: string, storeId: string): Promise<AxiosResponse<any>> {
+  async getItemSign(itemId: string, size: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getItemSign`;
     return this.httpService.get(url, {
-      params: {
-        itemId,
-        size,
-        storeId,
-      },
+      params: { itemId, size, storeId },
       responseType: 'arraybuffer',
     }).toPromise();
   }
 
-  async getPromoSign(promoNum: string, size: string, storeId: string): Promise<AxiosResponse<any>> {
+  async getPromoSign(promoNum: string, size: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getPromoSign`;
     return this.httpService.get(url, {
-      params: {
-        promoNum,
-        size,
-        storeId,
-      },
+      params: { promoNum, size, storeId },
       responseType: 'arraybuffer',
     }).toPromise();
   }
 
-  async getSign(itemId: string, size: string, storeId: string): Promise<AxiosResponse<any>> {
+  async getSign(itemId: string, size: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getSign`;
     return this.httpService.get(url, {
-      params: {
-        itemId,
-        size,
-        storeId,
-      },
+      params: { itemId, size, storeId },
       responseType: 'arraybuffer',
     }).toPromise();
   }
@@ -86,8 +60,8 @@ export class CodcodService {
       const response = await this.getPromoSign(itemId, size, storeId);
       image = Buffer.from(response.data);
     } else {
-      const checkResponse = await this.getSign(itemId, size, storeId);
-      image = Buffer.from(checkResponse.data);
+      const response = await this.getSign(itemId, size, storeId);
+      image = Buffer.from(response.data);
     }
 
     return image;
