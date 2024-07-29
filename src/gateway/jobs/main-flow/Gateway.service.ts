@@ -6,19 +6,19 @@ import { PricerService } from 'src/pricer/pricer.service';
 @Injectable()
 export class GatewayService {
   private readonly logger = new Logger(GatewayService.name);
-  private readonly storeId: string;
-  private readonly projection = 'S'; // Adjust as needed
+  private readonly storeId = process.env.STORE_ID;;
+  private readonly projection = 'S';
 
   constructor(
     private readonly codcodService: CodcodService,
     private readonly pricerService: PricerService,
   ) {
-    this.storeId = process.env.STORE_ID;
   }
 
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_SECOND)
   async processUpdates(): Promise<void> {
     const lastUpdateTime = new Date().toISOString();
+    console.log(`Processing updates since ${lastUpdateTime}`);
 
     try {
       // Fetch updated items from Codcod
@@ -42,7 +42,7 @@ export class GatewayService {
         // Process the filtered items
         await this.processItems(filteredItemIds);
 
-      } while (pricerItems.length === limit); // Continue if there are more items
+      } while (pricerItems.length === limit);
 
       this.logger.log('Processing completed.');
     } catch (error) {

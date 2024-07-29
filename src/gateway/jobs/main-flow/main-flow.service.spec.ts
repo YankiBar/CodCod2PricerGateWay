@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MainFlowService } from './main-flow.service';
+import { GatewayService } from './Gateway.service';
 
 describe('MainFlowService', () => {
-  let service: MainFlowService;
+  let service: GatewayService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MainFlowService],
+      providers: [GatewayService],
     }).compile();
 
-    service = module.get<MainFlowService>(MainFlowService);
+    service = module.get<GatewayService>(GatewayService);
   });
 
   it('should be defined', () => {
