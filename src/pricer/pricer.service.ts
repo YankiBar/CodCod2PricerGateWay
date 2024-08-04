@@ -10,6 +10,8 @@ export class PricerService {
   private readonly baseURL: string;
   private readonly username: string;
   private readonly password: string;
+  private readonly projection = 'S';
+
 
   constructor(
     private readonly httpService: HttpService,
@@ -26,7 +28,7 @@ export class PricerService {
   }
 
   async fetchItems(start: number, limit: number, projection: string): Promise<any> {
-    const url = `${this.baseURL}/api/public/core/v1/items`;
+    const url = `${this.baseURL}/api/public/core/v1/labels`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -42,6 +44,29 @@ export class PricerService {
       throw error;
     }
   }
+
+  // Fetch items from Pricer
+  async getAllLabelsInStore(storeId: string): Promise<any> {
+    let pricerItems = [];
+    let start = 0;
+    const limit = 500;
+    try {
+
+    do {
+      const response = await this.fetchItems(start, limit, this.projection);
+      pricerItems += response;
+      start += limit;
+
+    } while (pricerItems.length === limit);
+
+    this.logger.log('Processing completed.');
+  } catch (error: any) {
+    this.logger.error('Error processing updates:', error.stack);
+  }
+return pricerItems;
+  }
+
+
 
   async updateItemImage(itemId: string, pageIndex: number, resize: number, image: Buffer): Promise<any> {
     const url = `${this.baseURL}/api/public/core/v1/items/${itemId}/page/${pageIndex}`;

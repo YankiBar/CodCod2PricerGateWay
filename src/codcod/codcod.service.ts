@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { firstValueFrom } from 'rxjs';
+
 
 @Injectable()
 export class CodcodService {
@@ -8,47 +10,97 @@ export class CodcodService {
   private readonly logger = new Logger(CodcodService.name);
   private readonly baseURL: string;
 
-  constructor(private readonly httpService: HttpService) {
-    this.baseURL = process.env.CODCOD_API_URL;
+  constructor(private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    this.baseURL = this.configService.get<string>('CODCOD_API_URL');
+    // this.username = this.configService.get<string>('CODCOD_API_USERNAME');
+    // this.password = this.configService.get<string>('CODCOD_API_PASSWORD');
   }
 
   async getUpdatedItems(lastUpdateTime: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getUpdatedItems`;
-    return this.httpService.get(url, {
-      params: { dt: lastUpdateTime, storeId },
-    }).toPromise();
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params: { dt: lastUpdateTime, storeId },
+          responseType: 'arraybuffer',
+        })
+      )
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(`Error fetching sign: ${error.message}`, error.stack);
+      throw error;
+    }
   }
+
 
   async getUpdatedPromos(lastUpdateTime: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getUpdatedPromos`;
-    return this.httpService.get(url, {
-      params: { dt: lastUpdateTime, storeId },
-    }).toPromise();
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params: { dt: lastUpdateTime, storeId },
+          responseType: 'arraybuffer',
+        })
+      )
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(`Error fetching sign: ${error.message}`, error.stack);
+      throw error;
+    }
   }
+
 
   async getItemSign(itemId: string, size: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getItemSign`;
-    return this.httpService.get(url, {
-      params: { itemId, size, storeId },
-      responseType: 'arraybuffer',
-    }).toPromise();
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params: { itemId, size, storeId },
+          responseType: 'arraybuffer',
+        })
+      )
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(`Error fetching sign: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async getPromoSign(promoNum: string, size: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getPromoSign`;
-    return this.httpService.get(url, {
-      params: { promoNum, size, storeId },
-      responseType: 'arraybuffer',
-    }).toPromise();
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params: { promoNum, size, storeId },
+          responseType: 'arraybuffer',
+        })
+      )
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(`Error fetching sign: ${error.message}`, error.stack);
+      throw error;
+    }
   }
+  
 
   async getSign(itemId: string, size: string, storeId: string): Promise<any> {
     const url = `${this.baseURL}/getSign`;
-    return this.httpService.get(url, {
-      params: { itemId, size, storeId },
-      responseType: 'arraybuffer',
-    }).toPromise();
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params: { itemId, size, storeId },
+          responseType: 'arraybuffer',
+        })
+      )
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(`Error fetching sign: ${error.message}`, error.stack);
+      throw error;
+    }
   }
+
 
   async fetchImage(itemId: string, size: string, storeId: string): Promise<Buffer> {
     let image: Buffer;

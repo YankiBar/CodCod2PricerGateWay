@@ -15,41 +15,30 @@ export class GatewayService {
   ) {
   }
 
-  @Cron(CronExpression.EVERY_SECOND)
+  @Cron(CronExpression.EVERY_MINUTE)
   async processUpdates(): Promise<void> {
     const lastUpdateTime = new Date().toISOString();
     console.log(`Processing updates since ${lastUpdateTime}`);
 
     try {
       // Fetch updated items from Codcod
-      const codcodItemsResponse = await this.codcodService.getUpdatedItems(lastUpdateTime, this.storeId);
-      const codcodItems = codcodItemsResponse.data.items;
+      const codcodItems = await this.codcodService.getUpdatedItems(lastUpdateTime, this.storeId);
+      
+      // Fetch all labels from Pricer
+      const allLabels = await this.pricerService.getAllLabelsInStore(this.storeId);
+      
+      // Filter items that exist in both Codcod and Pricer
+      const pricerItemIds = allLabels.map(item => item.links.itemId);
+      const filteredItemIds = codcodItems.filter((id: any) => pricerItemIds.includes(id));
 
-      // Fetch items from Pricer
-      let pricerItems = [];
-      let start = 0;
-      const limit = 500;
-
-      do {
-        const response = await this.pricerService.fetchItems(start, limit, this.projection);
-        pricerItems = response;
-        start += limit;
-
-        // Filter items that exist in both Codcod and Pricer
-        const pricerItemIds = pricerItems.map(item => item.itemId);
-        const filteredItemIds = codcodItems.filter((id: any) => pricerItemIds.includes(id));
-
-        // Process the filtered items
-        await this.processItems(filteredItemIds);
-
-      } while (pricerItems.length === limit);
+      // Process the filtered items
+      await this.processItems(filteredItemIds);
 
       this.logger.log('Processing completed.');
     } catch (error) {
       this.logger.error('Error processing updates:', error.stack);
     }
   }
-
   async processItems(itemIds: string[]): Promise<void> {
     for (const itemId of itemIds) {
       try {
