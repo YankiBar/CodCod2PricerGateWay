@@ -1,2 +1,7 @@
 # CodCod2PricerGateWay
 The Codcod to Pricer Gateway (Kodkod2PricerGW) integrates Codcod and Pricer systems, synchronizing item and promotion data. It fetches updates from Codcod, processes them, and updates Pricer displays. The system supports various monitor types, handles image updates, and logs all actions for monitoring.
+
+Features
+
+Monitors The system supports three types of monitors:
+Type A: Displays a specific item. Type B: Displays a specific promotion. Shows a default image once the promotion ends. Type C: Dynamically displays an item. If an item has a promotion, the promotion is displayed instead. 2. Monitor Configuration Each monitor is defined with a type and links to an item or promotion. Monitors have specific dimensions, which can be read using the Pricer API. 3. Synchronization Synchronization occurs every X minutes to ensure data consistency between Codcod and Pricer. The system reads the list of active promotions or changes from the previous synchronization using Codcod's API. Active items are fetched from Pricer's API, including items with recent changes. 4. Data Mapping The gateway maps the signage configuration in the store via the Pricer API. It cross-checks information between Codcod and Pricer, processing only the common items. 5. Image Handling The system reads item images, promotion images, and default images from Codcod using its API. These images are then updated in the Pricer system. 6. Logging All API interactions are logged for investigation. Logs are maintained daily and retained for several days.
