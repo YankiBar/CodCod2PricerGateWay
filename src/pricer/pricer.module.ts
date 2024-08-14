@@ -6,7 +6,7 @@ import { PricerService } from './pricer.service';
 @Module({
   imports: [
     HttpModule,
-    ConfigModule, // Ensure ConfigModule is imported here
+    ConfigModule,
   ],
   providers: [PricerService],
   exports: [PricerService],

@@ -2,36 +2,40 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { CodcodService } from 'src/codcod/codcod.service';
 import { PricerService } from 'src/pricer/pricer.service';
-import AsciiArt from 'ascii-art';
-
-async function displayImageAsAscii(imageBuffer: Buffer) {
-  try {
-    const artwork = await AsciiArt.image({
-      data: imageBuffer,
-      width: 40, // Adjust the width as needed
-    });
-    console.log(artwork);
-  } catch (error) {
-    console.error('Failed to display image as ASCII:', error);
-  }
-}
+import { join } from 'path';
+import { promises as fsPromises } from 'fs';
+import * as fs from 'fs';
+import { ConfigService } from '@nestjs/config';
 
 function addHoursToUtcTime(originalTime: string, hoursToAdd: number): string {
   const date = new Date(originalTime);
   date.setUTCHours(date.getUTCHours() + hoursToAdd);
-  return date.toISOString(); // Convert the Date object back to an ISO string
+  return date.toISOString();
+}
+
+function removeHoursToUtcTime(
+  originalTime: string,
+  hoursToSubtract: number,
+): string {
+  const date = new Date(originalTime);
+  date.setUTCHours(date.getUTCHours() - hoursToSubtract);
+  return date.toISOString();
 }
 
 @Injectable()
 export class GatewayService {
   private readonly logger = new Logger(GatewayService.name);
-  private readonly storeId = process.env.STORE_ID;
+  private readonly storeId: string;
   private readonly projection = 'S';
+  private readonly imagesDir = join(__dirname, 'images');
 
   constructor(
     private readonly codcodService: CodcodService,
     private readonly pricerService: PricerService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.storeId = this.configService.get<string>('STORE_ID');
+  }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async processUpdates(): Promise<void> {
@@ -42,45 +46,53 @@ export class GatewayService {
 
     try {
       // Fetch updated items from Codcod
-      const codcodItems = await this.codcodService.getUpdatedItems(
-        lastUpdateTime,
-        this.storeId,
-      );
-      const codcodPromos = await this.codcodService.getUpdatedPromos(
-        lastUpdateTime,
-        this.storeId,
-      );
-      console.log(codcodItems);
-      if (Array.isArray(codcodItems) && codcodItems.length > 0) {
-        for (const item in codcodItems) {
-          this.logger.log(`Processing itemId: ${codcodItems[item].itemId}`);
-          // Fetch item image from Codcod
-          const image = await this.codcodService.fetchItemImage(
-            codcodItems[item].barcode,
-            '768X920',
-            this.storeId,
-          );
-          this.logger.log(`Image size: ${image.length} bytes`);
-          this.logger.log('Displaying image as ASCII...');
-          await displayImageAsAscii(image);  
+      const codcodItems =
+        (await this.codcodService.getAllBranchItems(
+          // removeHoursToUtcTime(updatedTime, 6),
+          this.storeId,
+        )) || [];
+      const codcodPromos =
+        (await this.codcodService.getAllBranchPromos(
+          // lastUpdateTime,
+          this.storeId,
+        )) || [];
+      console.log('Codcod Items:', codcodItems);
+      console.log('Codcod Promos:', codcodPromos);
 
-          if (!image) {
-            this.logger.warn(
-              `No image found for itemId: ${codcodItems[item].itemId}`,
-            );
-            continue;
-          }
+      // Fetch all labels from Pricer
+      const allLabels = await this.pricerService.getAllLabelsInStore();
+      console.log('All Labels:', allLabels);
+      if (Array.isArray(allLabels) || allLabels.length > 0) {
+        for (const item of allLabels) {
+          const links = item.links[0];
+          console.log(`the ItemID of this lebal is: ${links.itemId}`);
         }
       }
-      // // Fetch all labels from Pricer
-      // const allLabels = await this.pricerService.getAllLabelsInStore(this.storeId);
 
-      // // Filter items that exist in both Codcod and Pricer
-      // const pricerItemIds = allLabels.map(item => item.links.itemId);
-      // const filteredItemIds = codcodItems.filter((id: any) => pricerItemIds.includes(id));
+      // Filter items that exist in both Codcod and Pricer
+      const pricerItemIds = allLabels
+        .map((item) => {
+          if (item.links && item.links.length > 0) {
+            return item.links[0].itemId;
+          }
+          return null;
+        })
+        .filter((itemId) => itemId !== null); 
+      const filteredItemIds = codcodItems.filter((item: any) =>
+        pricerItemIds.includes(item.barcode),
+      );
+      console.log(`the pricerItemIds is: ${pricerItemIds}`)
+      const filteredPromoIds = codcodPromos.filter((promo: any) =>
+        pricerItemIds.includes(promo.barcode),
+      );
+
+      // Ensure proper processing
+      console.log('Filtered Items:', filteredItemIds);
+      console.log('Filtered Promos:', filteredPromoIds);
 
       // Process the filtered items
-      // await this.processItems(filteredItemIds);
+      await this.processItems(filteredItemIds);
+      await this.processItems(filteredPromoIds);
 
       this.logger.log('Processing completed.');
     } catch (error) {
@@ -92,10 +104,9 @@ export class GatewayService {
     for (const itemId of itemIds) {
       try {
         // Fetch item image from Codcod
-        const image = await this.codcodService.fetchImage(
+        const image = await this.codcodService.downloadImageFromService(
           itemId,
-          'defaultSize',
-          this.storeId,
+          '768X920',
         );
         if (!image) {
           this.logger.warn(`No image found for itemId: ${itemId}`);
@@ -103,7 +114,7 @@ export class GatewayService {
         }
 
         // Update item image in Pricer
-        await this.pricerService.updateItemImage(itemId, 0, 0, image); // Adjust parameters as needed
+        await this.pricerService.updateItemImage(itemId, 0, 2, image);
         this.logger.log(`Successfully updated image for itemId: ${itemId}`);
       } catch (error) {
         this.logger.error(`Error processing itemId: ${itemId}`, error.stack);
