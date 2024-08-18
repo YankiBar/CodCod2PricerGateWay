@@ -81,15 +81,20 @@ export class PricerService {
     resize: number,
     image: Buffer,
   ): Promise<any> {
-    const url = `${this.baseURL}/api/public/core/v1/items/${itemId}/page/${pageIndex}?resize=${resize}`;
+    const url = `${this.baseURL}/api/public/core/v1/items/${itemId}/page/${pageIndex}`;
+
     const formData = new FormData();
 
     // Append the image buffer with the original filename
-    formData.append('imageFile', image, { filename: `${itemId}.png`, contentType: 'image/png' });
+    formData.append('imageFile', image, {
+      filename: `${itemId}.png`,
+      contentType: 'image/png',
+    });
 
     try {
       const response = await firstValueFrom(
         this.httpService.post(url, formData, {
+          params: { resize },
           headers: {
             ...formData.getHeaders(),
           },
@@ -100,16 +105,16 @@ export class PricerService {
         }),
       );
 
-      this.logger.log(`Successfully updated image for itemId ${itemId}. Request ID: ${response.data.requestId}`);
+      this.logger.log(
+        `Successfully updated image for itemId ${itemId}. Request ID: ${response.data.requestId}`,
+      );
       return response.data;
-
     } catch (error) {
       this.logger.error(
         `Error updating item image in Pricer: ${error.message}`,
         error.stack,
       );
-      throw error; 
+      throw error;
     }
   }
-
 }

@@ -3,8 +3,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { CodcodService } from 'src/codcod/codcod.service';
 import { PricerService } from 'src/pricer/pricer.service';
 import { join } from 'path';
-import { promises as fsPromises } from 'fs';
-import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 
 function addHoursToUtcTime(originalTime: string, hoursToAdd: number): string {
@@ -27,6 +25,8 @@ export class GatewayService {
   private readonly logger = new Logger(GatewayService.name);
   private readonly storeId: string;
   private readonly projection = 'S';
+  private readonly size: string;
+
   private readonly imagesDir = join(__dirname, 'images');
 
   constructor(
@@ -48,12 +48,12 @@ export class GatewayService {
       // Fetch updated items from Codcod
       const codcodItems =
         (await this.codcodService.getAllBranchItems(
-          // removeHoursToUtcTime(updatedTime, 6),
+          // lastUpdateTime,
           this.storeId,
         )) || [];
       const codcodPromos =
-        (await this.codcodService.getAllBranchPromos(
-          // lastUpdateTime,
+        (await this.codcodService.getUpdatedPromos(
+          lastUpdateTime,
           this.storeId,
         )) || [];
       console.log('Codcod Items:', codcodItems);
@@ -71,20 +71,44 @@ export class GatewayService {
 
       // Filter items that exist in both Codcod and Pricer
       const pricerItemIds = allLabels
-        .map((item) => {
-          if (item.links && item.links.length > 0) {
-            return item.links[0].itemId;
-          }
-          return null;
-        })
-        .filter((itemId) => itemId !== null); 
-      const filteredItemIds = codcodItems.filter((item: any) =>
-        pricerItemIds.includes(item.barcode),
+      .map((item) => {
+        if (item.links && item.links.length > 0) {
+          return { itemId: item.links[0].itemId, modelName: item.modelName };
+        }
+        return null;
+      })
+      .filter((itemId) => itemId !== null);
+
+    // Correct filtering and mapping:
+    const filteredItemIds = codcodItems.filter((item: any) =>
+      pricerItemIds.some(
+        (pricerItem) => pricerItem.itemId === item.barcode
+      )
+    ).map((item) => {
+      // Find the matching label based on itemId
+      const matchingLabel = pricerItemIds.find(
+        (pricerItem) => pricerItem.itemId === item.barcode
       );
-      console.log(`the pricerItemIds is: ${pricerItemIds}`)
-      const filteredPromoIds = codcodPromos.filter((promo: any) =>
-        pricerItemIds.includes(promo.barcode),
+
+      // Return the object with itemId and modelName
+      return matchingLabel ? { itemId: item.barcode, modelName: matchingLabel.modelName } : null;
+    }).filter((item) => item !== null);
+
+    const filteredPromoIds = codcodPromos.filter((promo: any) =>
+      pricerItemIds.some(
+        (pricerItem) => pricerItem.itemId === promo.barcode
+      )
+    ).map((promo) => {
+      // Find the matching label based on itemId
+      const matchingLabel = pricerItemIds.find(
+        (pricerItem) => pricerItem.itemId === promo.barcode
       );
+
+      // Return the object with itemId and modelName
+      return matchingLabel ? { itemId: promo.barcode, modelName: matchingLabel.modelName } : null;
+    }).filter((item) => item !== null);
+
+
 
       // Ensure proper processing
       console.log('Filtered Items:', filteredItemIds);
@@ -100,13 +124,23 @@ export class GatewayService {
     }
   }
 
-  async processItems(itemIds: string[]): Promise<void> {
+  async processItems(itemIds: { itemId: string; modelName: string }[]): Promise<void> {
     for (const itemId of itemIds) {
+      let size = "768X920";
+      // if (itemId.modelName === 'SmartTAG HDL Red 1328') {
+      //   size = '296x128'; 
+      // } else if (itemId.modelName === 'SmartTAG HD110 Red') { // Use === for comparison
+      //   size = '400x300'; 
+      // } else if (itemId.modelName === 'SmartTAG HD200L Red') { 
+      //   size = '640x384'; 
+      // } else if (itemId.modelName === 'SmartTAG HD300 Red') { 
+      //   size = '1304x984'; 
+      // } 
       try {
         // Fetch item image from Codcod
-        const image = await this.codcodService.downloadImageFromService(
-          itemId,
-          '768X920',
+        const image = await this.codcodService.getSign(
+          itemId.itemId,
+          size,
         );
         if (!image) {
           this.logger.warn(`No image found for itemId: ${itemId}`);
@@ -114,10 +148,10 @@ export class GatewayService {
         }
 
         // Update item image in Pricer
-        await this.pricerService.updateItemImage(itemId, 0, 2, image);
-        this.logger.log(`Successfully updated image for itemId: ${itemId}`);
+        await this.pricerService.updateItemImage(itemId.itemId, 0, 1, image);
+        this.logger.log(`Successfully updated image for itemId: ${itemId.itemId}`);
       } catch (error) {
-        this.logger.error(`Error processing itemId: ${itemId}`, error.stack);
+        this.logger.error(`Error processing itemId: ${itemId.itemId}`, error.stack);
       }
     }
   }
