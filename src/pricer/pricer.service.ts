@@ -3,10 +3,11 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import * as FormData from 'form-data';
 import { firstValueFrom } from 'rxjs';
+import { MyLogger } from 'src/logger';
 
 @Injectable()
 export class PricerService {
-  private readonly logger = new Logger(PricerService.name);
+  private readonly logger = new MyLogger();
   private readonly baseURL: string;
   private readonly username: string;
   private readonly password: string;
@@ -36,8 +37,8 @@ export class PricerService {
             Accept: 'application/json',
           },
           auth: {
-            username: 'config',
-            password: 'config',
+            username: this.username.toString(),
+            password: this.password.toString(),
           },
         }),
       );
@@ -99,8 +100,8 @@ export class PricerService {
             ...formData.getHeaders(),
           },
           auth: {
-            username: 'config',
-            password: 'config',
+            username: this.username.toString(),
+            password: this.password.toString(),
           },
         }),
       );

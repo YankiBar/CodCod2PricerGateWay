@@ -3,10 +3,11 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, lastValueFrom } from 'rxjs';
 import { json } from 'stream/consumers';
+import { MyLogger } from 'src/logger';
 
 @Injectable()
 export class CodcodService {
-  private readonly logger = new Logger(CodcodService.name);
+  private readonly logger = new MyLogger();
   private readonly ContentBaseURL: string;
   private readonly MediaBaseURL: string;
   private readonly storeId: string;
@@ -96,7 +97,7 @@ export class CodcodService {
       );
       if (responseData?.data?.Items) {
         responseData.data.Items.forEach((item: any, index: number) => {
-          console.log(`Item ${index}:`, JSON.stringify(item, null, 2));
+          this.logger.log(`Item ${index}:  `+ JSON.stringify(item, null, 2));
         });
         return responseData.data.Items;
       } else {
@@ -130,7 +131,7 @@ export class CodcodService {
       // Log each item in the Items array
       if (responseData?.data?.Items) {
         responseData.data.Items.forEach((item: any, index: number) => {
-          console.log(`Item ${index}:`, JSON.stringify(item, null, 2));
+          this.logger.log(`Item ${index}: `+ JSON.stringify(item, null, 2));
         });
         return responseData.data;
       } else {
@@ -261,7 +262,6 @@ export class CodcodService {
 
       // The response should already be a Buffer if it's an array buffer
       const imageBuffer = Buffer.from(response);
-      console.log(JSON.stringify(imageBuffer));
 
       // Log the buffer length for debugging
       this.logger.log(
