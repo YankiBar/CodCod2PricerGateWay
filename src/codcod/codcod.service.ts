@@ -34,11 +34,11 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
 
-      if (responseData?.data?.Items) {
+      if (responseData?.data) {
         //   responseData.data.Items.forEach((item: any, index: number) => {
         //     console.log(`Branch Item ${index}:`, JSON.stringify(item, null, 2));
         //   });
-        return responseData.data.Items;
+        return responseData.data;
       } else {
         this.logger.warn('No branch items were found in the response.');
         return [];
@@ -65,11 +65,11 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
 
-      if (responseData?.data?.Items) {
+      if (responseData?.data) {
         // responseData.data.Items.forEach((item: any, index: number) => {
         //   console.log(`Branch Item ${index}:`, JSON.stringify(item, null, 2));
         // });
-        return responseData.data.Items;
+        return responseData.data;
       } else {
         this.logger.warn('No branch promos were found in the response.');
         return [];
@@ -97,7 +97,7 @@ export class CodcodService {
       );
       if (responseData?.data?.Items) {
         responseData.data.Items.forEach((item: any, index: number) => {
-          this.logger.log(`Item ${index}:  `+ JSON.stringify(item, null, 2));
+          this.logger.log(`Item ${index}:  ` + JSON.stringify(item, null, 2));
         });
         return responseData.data.Items;
       } else {
@@ -131,7 +131,7 @@ export class CodcodService {
       // Log each item in the Items array
       if (responseData?.data?.Items) {
         responseData.data.Items.forEach((item: any, index: number) => {
-          this.logger.log(`Item ${index}: `+ JSON.stringify(item, null, 2));
+          this.logger.log(`Item ${index}: ` + JSON.stringify(item, null, 2));
         });
         return responseData.data;
       } else {
@@ -146,10 +146,7 @@ export class CodcodService {
     }
   }
 
-  async getItemSign(
-    itemid: string,
-    size: string,
-  ): Promise<Buffer> {
+  async getItemSign(itemid: string, size: string): Promise<Buffer> {
     const url = `${this.MediaBaseURL}/getItemSign?StoreID=${this.storeId}&itemid=${itemid}&size=${size}`;
     try {
       const response = await firstValueFrom(
@@ -158,17 +155,18 @@ export class CodcodService {
         }),
       );
       this.logger.log(`Sign fetched for item with barcode: ${itemid}`);
-      return Buffer.from(response.data);    } catch (error) {
-        this.logger.error(
-          `Error fetching sign for barcode ${itemid}:`,
-          error.stack,
-        );
-        throw new Error(`Failed to fetch sign for ${itemid}`);
+      return Buffer.from(response.data);
+    } catch (error) {
+      this.logger.error(
+        `Error fetching sign for barcode ${itemid}:`,
+        error.stack,
+      );
+      throw new Error(`Failed to fetch sign for ${itemid}`);
     }
   }
 
   async getPromoSign(promoNum: string, size: string): Promise<Buffer> {
-    const url = `${this.MediaBaseURL}/getPromoSign?StoreID=${this.storeId}&itemid=${promoNum}&size=${size}`;
+    const url = `${this.MediaBaseURL}/getPromoSign?StoreID=${this.storeId}&prommoNum=${promoNum}&size=${size}`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -178,7 +176,10 @@ export class CodcodService {
       this.logger.log(`Sign fetched for promo with barcode: ${promoNum}`);
       return Buffer.from(response.data);
     } catch (error) {
-      this.logger.error(`Error fetching sign for promonum ${promoNum}:`, error.stack);
+      this.logger.error(
+        `Error fetching sign for promonum ${promoNum}:`,
+        error.stack,
+      );
       throw new Error(`Failed to fetch sign for ${promoNum}`);
     }
   }
@@ -243,10 +244,7 @@ export class CodcodService {
   //   return image;
   // }
 
-  async fetchItemImage(
-    itemid: string,
-    size: string,
-  ): Promise<Buffer> {
+  async fetchItemImage(itemid: string, size: string): Promise<Buffer> {
     try {
       const response = await this.getItemSign(itemid, size);
 

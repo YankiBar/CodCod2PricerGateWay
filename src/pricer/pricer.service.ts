@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import * as FormData from 'form-data';
@@ -78,7 +78,7 @@ export class PricerService {
     }
   }
 
-  async updateItemImage(
+  async updateLabelImage(
     itemId: string,
     pageIndex: number,
     resize: number,
