@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import * as FormData from 'form-data';
@@ -22,13 +22,14 @@ export class PricerService {
     this.password = this.configService.get<string>('PRICER_PASSWORD');
   }
 
-  async fetchItems(
+  async fetchLabels(
     start: number,
     limit: number,
     projection: string,
     serializeDatesToIso8601: boolean,
   ): Promise<any> {
     const url = `${this.baseURL}/api/public/core/v1/labels`;
+    this.logger.log(`Fetching the labels from Pricer: start=${start}, limit=${limit}, projection=${projection}, serializeDatesToIso8601=${serializeDatesToIso8601}`);
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -42,41 +43,42 @@ export class PricerService {
           },
         }),
       );
+      this.logger.log(`Successfully fetched the labels from Pricer.`);
       return response.data;
     } catch (error: any) {
       this.logger.error(
-        `Error fetching items from Pricer: ${error.message}`,
+        `Error fetching labels from Pricer: ${error.message}`,
         error.stack,
       );
       throw error;
     }
   }
 
-  // Fetch items from Pricer
+  // Fetch labels from Pricer
   async getAllLabelsInStore(): Promise<any> {
-    let pricerItems = [];
+    let pricerLabels = [];
     let start = 0;
     const limit = 500;
     try {
       do {
-        const response = await this.fetchItems(
+        const response = await this.fetchLabels(
           start,
           limit,
           this.projection,
           true,
         );
-        pricerItems = pricerItems.concat(response);
+        pricerLabels = pricerLabels.concat(response);
         start += limit;
-      } while (pricerItems.length === limit);
+      } while (pricerLabels.length === limit);
 
-      this.logger.log('Processing completed.');
-      return pricerItems;
+      this.logger.log(`Processing completed. Fetched ${pricerLabels.length} labels.`);
+      return pricerLabels;
     } catch (error: any) {
       this.logger.error('Error processing updates:', error.stack);
     }
   }
 
-  async updateItemImage(
+  async updateLabelImage(
     itemId: string,
     pageIndex: number,
     resize: number,
