@@ -166,7 +166,7 @@ export class CodcodService {
   }
 
   async getPromoSign(promoNum: string, size: string): Promise<Buffer> {
-    const url = `${this.MediaBaseURL}/getPromoSign?StoreID=${this.storeId}&prommoNum=${promoNum}&size=${size}`;
+    const url = `${this.MediaBaseURL}/getPromoSign?promoNum=${promoNum}&size=${size}&StoreID=${this.storeId}`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {

@@ -6,6 +6,30 @@ import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
 import { MyLogger } from '../../../logger';
 
+interface MatchedLabel {
+  itemId: string;
+  modelName: string;
+}
+
+interface Promo {
+  promonum: string;
+  dsc: string;
+}
+
+interface Item {
+  barcode: string;
+}
+
+interface Codcod {
+  promos?: Promo[];
+  Items?: Item[];
+}
+
+interface Label {
+  links: { itemId: string }[];
+  modelName: string;
+}
+
 function addHoursToUtcTime(originalTime: string, hoursToAdd: number): string {
   const date = new Date(originalTime);
   date.setUTCHours(date.getUTCHours() + hoursToAdd);
@@ -20,6 +44,7 @@ function getDesiredSize(modelName: string): {
     case 'SmartTAG HDL Red 1328':
       return { desiredWidth: 296, desiredHeight: 128 };
     case 'SmartTAG HD110':
+    case 'Image':
       return { desiredWidth: 400, desiredHeight: 300 };
     case 'SmartTAG HD200L Red':
       return { desiredWidth: 640, desiredHeight: 384 };
@@ -30,35 +55,27 @@ function getDesiredSize(modelName: string): {
   }
 }
 
-function filterAndMachLabels(codcod: any[], labels: any[]) {
-  const codcodItems = codcod.filter((item: { barcode: any }) => {
-    labels.some((label: { itemId: any }) => label.itemId === item.barcode);
-  });
-}
+function getMatchingLabels(codcod: Codcod, pricer: Label[]): MatchedLabel[] {
+  const itemSet = codcod.promos
+    ? new Set(codcod.promos.map((promo) => promo.promonum))
+    : codcod.Items
+      ? new Set(codcod.Items.map((item) => item.barcode))
+      : new Set();
 
-function getMatchingLabels(codcod: any, pricer: any) {
-  let itemSet: Set<unknown>;
-  if (codcod.promos) {
-    itemSet = new Set(
-      codcod.promos.map((promo: { promonum: any }) => promo.promonum),
+  // Handle empty itemSet and log as necessary
+  if (itemSet.size === 0) {
+    console.error(
+      'Neither promos nor items are present in the provided Codcod object.',
     );
-  } else if (codcod.Items) {
-    itemSet = new Set(
-      codcod.Items.map((item: { barcode: any }) => item.barcode),
-    );
-  } else {
     return [];
   }
 
-  const matchingLabels = pricer.filter((label: { links: any[] }) =>
-    label.links.some((link: { itemId: any }) => itemSet.has(link.itemId)),
-  );
-  return matchingLabels.map(
-    (label: { links: { itemId: any }[]; modelName: any }) => ({
+  return pricer
+    .filter((label) => label.links.some((link) => itemSet.has(link.itemId)))
+    .map((label) => ({
       itemId: label.links[0].itemId,
       modelName: label.modelName,
-    }),
-  );
+    }));
 }
 
 @Injectable()
@@ -71,7 +88,7 @@ export class GatewayService {
     private readonly pricerService: PricerService,
     private readonly configService: ConfigService,
   ) {
-    this.storeId = this.configService.get<string>('STORE_ID');
+    this.storeId = this.configService.get<string>('STORE_ID', '16');
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -83,69 +100,61 @@ export class GatewayService {
 
     try {
       // Fetch updated items from Codcod
-      const codcodItems =
-        (await this.codcodService.getAllBranchItems(
-          // lastUpdateTime,
-          this.storeId,
-        )) || [];
-      const codcodPromos =
-        (await this.codcodService.getAllBranchPromos(
-          // lastUpdateTime,
-          this.storeId,
-        )) || [];
-      // this.logger.log('Codcod Items: ' + JSON.stringify(codcodItems));
-      this.logger.log('Codcod Promos: ' + JSON.stringify(codcodPromos));
+      const codcodItems = {
+        Items: await this.codcodService.getAllBranchItems(this.storeId) || []
+      };
+      
+      const codcodPromos = {
+        promos: await this.codcodService.getAllBranchPromos(this.storeId) || []
+      };
+      
+      this.logger.log('Codcod Items: ' + JSON.stringify(codcodItems, null, 2));
+      this.logger.log(
+        'Codcod Promos: ' + JSON.stringify(codcodPromos, null, 2),
+      );
 
       // Fetch all labels from Pricer
       const allLabels = await this.pricerService.getAllLabelsInStore();
-      // this.logger.log('All Labels: ' + JSON.stringify(allLabels));
-      // if (Array.isArray(allLabels) || allLabels.length > 0) {
-      //   for (const item of allLabels) {
-      //     const links = item.links[0];
-      //     console.log(`the ItemID of this lebal is: ${links.itemId}`);
-      //   }
-      // }
 
       // Filter items that exist in both Codcod and Pricer
       const filteredItemIds = getMatchingLabels(codcodItems, allLabels);
-
       const filteredPromoIds = getMatchingLabels(codcodPromos, allLabels);
 
-      // Ensure proper processing
-      this.logger.log('Filtered Items: ' + JSON.stringify(filteredItemIds));
-      this.logger.log('Filtered Promos: ' + +JSON.stringify(filteredPromoIds));
+      this.logger.log('Filtered Items: ' + JSON.stringify(filteredItemIds, null, 2));
+      this.logger.log('Filtered Promos: ' + JSON.stringify(filteredPromoIds, null, 2));
+      
 
-      // Process the filtered items
-      await this.processItems(filteredItemIds, 'items');
-      await this.processItems(filteredPromoIds, 'promos');
-
+      await Promise.all([
+        this.processItems(filteredItemIds, 'items'),
+        this.processItems(filteredPromoIds, 'promos'),
+      ]);
       this.logger.log('Processing completed.');
     } catch (error) {
+      // Ensure error logging passes only the message and stack as two distinct strings
       this.logger.error('Error processing updates:', error.stack);
     }
   }
 
-  async processItems(
-    itemIds: { itemId: string; modelName: string }[],
-    source: string,
-  ): Promise<void> {
+  async processItems(itemIds: MatchedLabel[], source: string): Promise<void> {
     const size = source === 'items' ? '768X920' : '158x640';
-    const nameFunction = source === 'items' ? 'getItemSign' : 'getPromoSign';
+    const itemOrPromo = source === 'items' ? 'getItemSign' : 'getPromoSign';
 
     for (const itemId of itemIds) {
       const { desiredWidth, desiredHeight } = getDesiredSize(itemId.modelName);
 
       try {
-        
         // Fetch item image from Codcod
-        const image = await this.codcodService[nameFunction](itemId.itemId, size);
+        const image = await this.codcodService[itemOrPromo](
+          itemId.itemId,
+          size,
+        );
         if (!image) {
           this.logger.warn(`No image found for itemId: ${itemId}`);
           continue;
         }
 
         const processedImage = await sharp(image)
-          .rotate(90) // Rotate image 90 degrees to the right
+          .rotate(90)
           .resize(desiredWidth, desiredHeight, {
             fit: 'fill',
           })
