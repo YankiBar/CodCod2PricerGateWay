@@ -80,6 +80,7 @@ export class PricerService {
 
   async updateLabelImage(
     itemId: string,
+    itemIdWithoutPrefix: string,
     pageIndex: number,
     resize: number,
     image: Buffer,
@@ -90,7 +91,7 @@ export class PricerService {
 
     // Append the image buffer with the original filename
     formData.append('imageFile', image, {
-      filename: `${itemId}.png`,
+      filename: `${itemIdWithoutPrefix}.png`,
       contentType: 'image/png',
     });
 

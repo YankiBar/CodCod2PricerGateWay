@@ -22,7 +22,7 @@ export class CodcodService {
   }
 
   async getAllBranchItems(storeId: string): Promise<any[]> {
-    const url = `${this.ContentBaseURL}/getBranchItems`;
+    const url = `${this.ContentBaseURL}/getBranchItemsA`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -35,9 +35,9 @@ export class CodcodService {
       );
 
       if (responseData?.data) {
-        //   responseData.data.Items.forEach((item: any, index: number) => {
-        //     console.log(`Branch Item ${index}:`, JSON.stringify(item, null, 2));
-        //   });
+        // responseData.data.Items.forEach((item: any, index: number) => {
+        //   console.log(`Branch Item ${index}:`, JSON.stringify(item, null, 2));
+        // });
         return responseData.data;
       } else {
         this.logger.warn('No branch items were found in the response.');
@@ -53,7 +53,7 @@ export class CodcodService {
   }
 
   async getAllBranchPromos(storeId: string): Promise<any[]> {
-    const url = `${this.ContentBaseURL}/getPromos`;
+    const url = `${this.ContentBaseURL}/getPromosA`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -84,7 +84,7 @@ export class CodcodService {
   }
 
   async getUpdatedItems(lastUpdateTime: string, StoreID: string): Promise<any> {
-    const url = `${this.ContentBaseURL}/getUpdatedItems`;
+    const url = `${this.ContentBaseURL}/getUpdatedItemsA`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -117,7 +117,7 @@ export class CodcodService {
     lastUpdateTime: string,
     StoreID: string,
   ): Promise<any> {
-    const url = `${this.ContentBaseURL}/getUpdatedPromos`;
+    const url = `${this.ContentBaseURL}/getUpdatedPromosA`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -147,7 +147,7 @@ export class CodcodService {
   }
 
   async getItemSign(itemid: string, size: string): Promise<Buffer> {
-    const url = `${this.MediaBaseURL}/getItemSign?StoreID=${this.storeId}&itemid=${itemid}&size=${size}`;
+    const url = `${this.MediaBaseURL}/getItemsign?itemid=${itemid}&StoreID=${this.storeId}&size=${size}`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -166,7 +166,8 @@ export class CodcodService {
   }
 
   async getPromoSign(promoNum: string, size: string): Promise<Buffer> {
-    const url = `${this.MediaBaseURL}/getPromoSign?promoNum=${promoNum}&size=${size}&StoreID=${this.storeId}`;
+    const url = `${this.MediaBaseURL}/getPromoSignA?StoreID=${this.storeId}&promonum=${promoNum}&size=${size}&`;
+    this.logger.log(`Attempting to fetch promo sign from: ${url}`);
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -177,7 +178,7 @@ export class CodcodService {
       return Buffer.from(response.data);
     } catch (error) {
       this.logger.error(
-        `Error fetching sign for promonum ${promoNum}:`,
+        `Error fetching promo sign for promonum ${promoNum}: ${error.message}`,
         error.stack,
       );
       throw new Error(`Failed to fetch sign for ${promoNum}`);
@@ -185,7 +186,7 @@ export class CodcodService {
   }
 
   async getSign(itemid: string, size: string): Promise<Buffer> {
-    const url = `${this.MediaBaseURL}/getsign?StoreID=${this.storeId}&itemid=${itemid}&size=${size}`;
+    const url = `${this.MediaBaseURL}/getsignA?StoreID=${this.storeId}&itemid=${itemid}&size=${size}`;
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -244,35 +245,35 @@ export class CodcodService {
   //   return image;
   // }
 
-  async fetchItemImage(itemid: string, size: string): Promise<Buffer> {
-    try {
-      const response = await this.getItemSign(itemid, size);
+  //   async fetchItemImage(itemid: string, size: string): Promise<Buffer> {
+  //     try {
+  //       const response = await this.getItemSign(itemid, size);
 
-      if (!response) {
-        this.logger.warn(`No data received for itemId: ${itemid}`);
-        throw new Error(`Failed to fetch image data for ${itemid}`);
-      } else if (!response) {
-        this.logger.warn(
-          `There is No response.data received for itemId: ${itemid}`,
-        );
-        throw new Error(`Failed to fetch response.data for ${itemid}`);
-      }
+  //       if (!response) {
+  //         this.logger.warn(`No data received for itemId: ${itemid}`);
+  //         throw new Error(`Failed to fetch image data for ${itemid}`);
+  //       } else if (!response) {
+  //         this.logger.warn(
+  //           `There is No response.data received for itemId: ${itemid}`,
+  //         );
+  //         throw new Error(`Failed to fetch response.data for ${itemid}`);
+  //       }
 
-      // The response should already be a Buffer if it's an array buffer
-      const imageBuffer = Buffer.from(response);
+  //       // The response should already be a Buffer if it's an array buffer
+  //       const imageBuffer = Buffer.from(response);
 
-      // Log the buffer length for debugging
-      this.logger.log(
-        `Image for item ID ${itemid} received, size: ${imageBuffer.length} bytes`,
-      );
+  //       // Log the buffer length for debugging
+  //       this.logger.log(
+  //         `Image for item ID ${itemid} received, size: ${imageBuffer.length} bytes`,
+  //       );
 
-      return imageBuffer;
-    } catch (error) {
-      this.logger.error(
-        `Error fetching image for barcode: ${itemid}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
+  //       return imageBuffer;
+  //     } catch (error) {
+  //       this.logger.error(
+  //         `Error fetching image for barcode: ${itemid}`,
+  //         error.stack,
+  //       );
+  //       throw error;
+  //     }
+  //   }
 }
