@@ -33,35 +33,36 @@ function getDesiredSize(modelName: string): {
   }
 }
 export function getMatchingLabels(codcod: any, pricer: any, logger: any) {
-  let itemSet: Set<unknown>;
-  if (codcod.Items) {
-    // Create a set of item barcodes from Codcod
-    itemSet = new Set(
-      codcod.Items.map((item: { barcode: any }) => item.barcode),
-    );
-  } else if (codcod.promos) {
-    // Create a set of promo numbers from Codcod
-    itemSet = new Set(
-      codcod.promos.map((promo: { promonum: any }) => promo.promonum),
-    );
-  } else {
-    logger.warn('No items found in Codcod data');
-    return [];
-  }
+// Extract and sanitize itemSet from `Codcod` data
+let itemSet: Set<string>;
+if (codcod.Items) {
+  // Create a set of item barcodes from Codcod
+  itemSet = new Set(codcod.Items.map((item: { barcode: string }) => item.barcode.replace(/^1?/, '')));
+} else if (codcod.promos) {
+  // Create a set of promo numbers from Codcod, removing prefixed '1'
+  itemSet = new Set(codcod.promos.map((promo: { promonum: string }) => promo.promonum.replace(/^1/, '')));
+} else {
+  logger.warn('No items or promos found in Codcod data');
+  return [];
+}
 
-  // Filter labels by matching their numeric IDs with Codcod data (ignoring 'I' and 'P' prefixes)
-  const matchingLabels = pricer.filter((label: { links: any[] }) =>
-    label.links.some((link: { itemId: any }) =>
-      itemSet.has(link.itemId.replace(/^[IP]/, '')),
-    ),
-  );
-  const result = matchingLabels.map(
-    (label: { links: { itemId: any }[]; modelName: any }) => ({
-      itemId: label.links[0].itemId,
-      modelName: label.modelName,
-    }),
-  );
-  return result;
+// Match `Pricer` data by normalizing IDs (removing any prefixes like 'I' or 'P')
+const matchingLabels = pricer.filter((label: { links: any[] }) =>
+  label.links.some((link: { itemId: string }) =>
+    itemSet.has(link.itemId.replace(/^[IP]/, ''))
+  ),
+);
+
+// Map the matched labels to desired format
+const result = matchingLabels.map(
+  (label: { links: { itemId: string }[]; modelName: any }) => ({
+    itemId: label.links[0].itemId, // Keep the existing itemId with its original prefix here
+    modelName: label.modelName,
+  }),
+);
+
+return result;
+
 }
 
 @Injectable()
@@ -87,13 +88,13 @@ export class GatewayService {
     try {
       // Fetch updated items from Codcod
       const codcodItems =
-        (await this.codcodService.getAllBranchItems(
-          // lastUpdateTime,
+        (await this.codcodService.getUpdatedItems(
+          lastUpdateTime,
           this.storeId,
         )) || [];
       const codcodPromos =
-        (await this.codcodService.getAllBranchPromos(
-          // lastUpdateTime,
+        (await this.codcodService.getUpdatedPromos(
+          lastUpdateTime,
           this.storeId,
         )) || [];
 
