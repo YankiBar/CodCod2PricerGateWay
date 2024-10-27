@@ -5,8 +5,6 @@ import { PricerService } from 'src/pricer/pricer.service';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
 import { MyLogger } from '../../../logger';
-import * as fs from 'fs';
-import * as path from 'path';
 
 function addHoursToUtcTime(originalTime: string, hoursToAdd: number): string {
   const date = new Date(originalTime);
@@ -33,36 +31,43 @@ function getDesiredSize(modelName: string): {
   }
 }
 export function getMatchingLabels(codcod: any, pricer: any, logger: any) {
-// Extract and sanitize itemSet from `Codcod` data
-let itemSet: Set<string>;
-if (codcod.Items) {
-  // Create a set of item barcodes from Codcod
-  itemSet = new Set(codcod.Items.map((item: { barcode: string }) => item.barcode.replace(/^1?/, '')));
-} else if (codcod.promos) {
-  // Create a set of promo numbers from Codcod, removing prefixed '1'
-  itemSet = new Set(codcod.promos.map((promo: { promonum: string }) => promo.promonum.replace(/^1/, '')));
-} else {
-  logger.warn('No items or promos found in Codcod data');
-  return [];
-}
+  // Extract and sanitize itemSet from `Codcod` data
+  let itemSet: Set<string>;
+  if (codcod.Items) {
+    // Create a set of item barcodes from Codcod
+    itemSet = new Set(
+      codcod.Items.map((item: { barcode: string }) =>
+        item.barcode.replace(/^1?/, ''),
+      ),
+    );
+  } else if (codcod.promos) {
+    // Create a set of promo numbers from Codcod, removing prefixed '1'
+    itemSet = new Set(
+      codcod.promos.map((promo: { promonum: string }) =>
+        promo.promonum.replace(/^1/, ''),
+      ),
+    );
+  } else {
+    logger.warn('No items or promos found in Codcod data');
+    return [];
+  }
 
-// Match `Pricer` data by normalizing IDs (removing any prefixes like 'I' or 'P')
-const matchingLabels = pricer.filter((label: { links: any[] }) =>
-  label.links.some((link: { itemId: string }) =>
-    itemSet.has(link.itemId.replace(/^[IP]/, ''))
-  ),
-);
+  // Match `Pricer` data by normalizing IDs (removing any prefixes like 'I' or 'P')
+  const matchingLabels = pricer.filter((label: { links: any[] }) =>
+    label.links.some((link: { itemId: string }) =>
+      itemSet.has(link.itemId.replace(/^[IP]/, '')),
+    ),
+  );
 
-// Map the matched labels to desired format
-const result = matchingLabels.map(
-  (label: { links: { itemId: string }[]; modelName: any }) => ({
-    itemId: label.links[0].itemId, // Keep the existing itemId with its original prefix here
-    modelName: label.modelName,
-  }),
-);
+  // Map the matched labels to desired format
+  const result = matchingLabels.map(
+    (label: { links: { itemId: string }[]; modelName: any }) => ({
+      itemId: label.links[0].itemId, // Keep the existing itemId with its original prefix here
+      modelName: label.modelName,
+    }),
+  );
 
-return result;
-
+  return result;
 }
 
 @Injectable()
@@ -135,7 +140,6 @@ export class GatewayService {
     itemIds: { itemId: string; modelName: string }[],
   ): Promise<void> {
     for (const { itemId, modelName } of itemIds) {
-
       const { desiredWidth, desiredHeight } = getDesiredSize(modelName);
       let nameFunction: string;
       let size = '768X960';
@@ -145,7 +149,6 @@ export class GatewayService {
       if (itemId.startsWith('I')) {
         nameFunction = 'getItemSign';
         itemIdWithoutPrefix = itemId.replace(/^I/, ''); // Remove 'I'
-
       } else if (itemId.startsWith('P')) {
         nameFunction = 'getPromoSign';
         itemIdWithoutPrefix = '1' + itemId.replace(/^P/, ''); // Remove 'P' and add '1'
@@ -179,24 +182,11 @@ export class GatewayService {
         );
 
         const processedImage = await sharp(image)
-          .rotate(90) // Rotate image 90 degrees to the right
+          .rotate(270) // Rotate image 90 degrees to the left
           .resize(desiredWidth, desiredHeight, {
             fit: 'fill',
           })
           .toBuffer();
-
-        // Save processed image to the local file system
-        const imagePath = path.join(__dirname, 'processed_images'); // Ensure this path exists
-        const filePath = path.join(imagePath, `${itemIdWithoutPrefix}.png`);
-
-        // Ensure the directory exists
-        fs.mkdirSync(imagePath, { recursive: true });
-
-        // Save the image file
-        fs.writeFileSync(filePath, processedImage);
-        this.logger.log(
-          `Processed image saved for itemId: ${itemIdWithoutPrefix} at ${filePath}`,
-        );
 
         // Log before sending to the update method
         this.logger.log(
@@ -212,9 +202,7 @@ export class GatewayService {
           processedImage,
         );
 
-        this.logger.log(
-          `Successfully updated image for itemId: ${itemId}`,
-        );
+        this.logger.log(`Successfully updated image for itemId: ${itemId}`);
       } catch (error) {
         this.logger.error(`Error processing itemId: ${itemId}`, error.stack);
       }
