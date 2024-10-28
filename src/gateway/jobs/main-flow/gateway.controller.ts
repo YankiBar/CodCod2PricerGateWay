@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { GatewayService } from './gateway.service'; // Adjust the import path
+import { GatewayService } from './gateway.service'
 
 @Controller('gateway')
 export class GatewayController {

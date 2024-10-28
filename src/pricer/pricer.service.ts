@@ -12,6 +12,7 @@ export class PricerService {
   private readonly username: string;
   private readonly password: string;
   private readonly projection = 'M';
+  private readonly defaultLimit: number = 500;
 
   constructor(
     private readonly httpService: HttpService,
@@ -22,14 +23,29 @@ export class PricerService {
     this.password = this.configService.get<string>('PRICER_PASSWORD');
   }
 
+  private constructUrl(endpoint: string): string {
+    return `${this.baseURL}/api/public/core/v1/${endpoint}`;
+  }
+
+  private createAuthHeaders() {
+    return {
+      auth: {
+        username: this.username,
+        password: this.password,
+      },
+    };
+  }
+
   async fetchLabels(
     start: number,
-    limit: number,
-    projection: string,
+    limit: number = this.defaultLimit,
+    projection: string = this.projection,
     serializeDatesToIso8601: boolean,
   ): Promise<any> {
-    const url = `${this.baseURL}/api/public/core/v1/labels`;
-    this.logger.log(`Fetching the labels from Pricer: start=${start}, limit=${limit}, projection=${projection}, serializeDatesToIso8601=${serializeDatesToIso8601}`);
+    const url = this.constructUrl('labels');
+    this.logger.log(
+      `Fetching labels from ${url} with start=${start}, limit=${limit}`,
+    );
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -37,41 +53,55 @@ export class PricerService {
           headers: {
             Accept: 'application/json',
           },
-          auth: {
-            username: this.username.toString(),
-            password: this.password.toString(),
-          },
+          ...this.createAuthHeaders(),
         }),
       );
-      this.logger.log(`Successfully fetched the labels from Pricer.`);
       return response.data;
     } catch (error: any) {
       this.logger.error(
         `Error fetching labels from Pricer: ${error.message}`,
         error.stack,
       );
-      throw error;
+      throw new Error(`Failed to fetch labels: ${error.message}`);
     }
   }
 
   // Fetch labels from Pricer
   async getAllLabelsInStore(): Promise<any> {
-    let pricerLabels = [];
+    const pricerLabels: any[] = [];
     let start = 0;
-    const limit = 500;
+    const limit = this.defaultLimit;
     try {
-      do {
+      while (true) {
         const response = await this.fetchLabels(
           start,
           limit,
           this.projection,
           true,
         );
-        pricerLabels = pricerLabels.concat(response);
-        start += limit;
-      } while (pricerLabels.length === limit);
 
-      this.logger.log(`Processing completed. Fetched ${pricerLabels.length} labels.`);
+        // Validate the response structure to avoid TypeError
+        if (!response || !Array.isArray(response)) {
+          this.logger.warn('No items found in response.');
+          break; // Exit the loop if there's no valid data
+        }
+        // Append fetched labels
+        pricerLabels.push(...response); // Use spread operator to add array items
+
+        this.logger.log(
+          `Processing completed. Fetched ${pricerLabels.length} labels.`,
+        );
+
+        // If the number of labels fetched is less than the limit, stop fetching
+        if (response.length < limit) {
+          this.logger.log('No more labels to fetch, completing the operation.');
+          break;
+        }
+
+        // Increment the start position for pagination
+        start += limit;
+      }
+
       return pricerLabels;
     } catch (error: any) {
       this.logger.error('Error processing updates:', error.stack);
@@ -80,18 +110,17 @@ export class PricerService {
 
   async updateLabelImage(
     itemId: string,
-    itemIdWithoutPrefix: string,
     pageIndex: number,
     resize: number,
     image: Buffer,
   ): Promise<any> {
-    const url = `${this.baseURL}/api/public/core/v1/items/${itemId}/page/${pageIndex}`;
+    const url = this.constructUrl(`items/${itemId}/page/${pageIndex}`);
 
     const formData = new FormData();
 
     // Append the image buffer with the original filename
     formData.append('imageFile', image, {
-      filename: `${itemIdWithoutPrefix}.png`,
+      filename: `${itemId}.png`,
       contentType: 'image/png',
     });
 
@@ -102,10 +131,7 @@ export class PricerService {
           headers: {
             ...formData.getHeaders(),
           },
-          auth: {
-            username: this.username.toString(),
-            password: this.password.toString(),
-          },
+          ...this.createAuthHeaders(),
         }),
       );
 
@@ -118,7 +144,7 @@ export class PricerService {
         `Error updating item image in Pricer: ${error.message}`,
         error.stack,
       );
-      throw error;
+      throw new Error(`Failed to update image for ${itemId}: ${error.message}`);
     }
   }
 }

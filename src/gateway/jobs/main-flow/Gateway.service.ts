@@ -5,70 +5,11 @@ import { PricerService } from 'src/pricer/pricer.service';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
 import { MyLogger } from '../../../logger';
-
-function addHoursToUtcTime(originalTime: string, hoursToAdd: number): string {
-  const date = new Date(originalTime);
-  date.setUTCHours(date.getUTCHours() + hoursToAdd);
-  return date.toISOString();
-}
-
-function getDesiredSize(modelName: string): {
-  desiredWidth: number;
-  desiredHeight: number;
-} {
-  switch (modelName) {
-    case 'SmartTAG HDL Red 1328':
-      return { desiredWidth: 296, desiredHeight: 128 };
-    case 'SmartTAG HD110':
-    case 'Image':
-      return { desiredWidth: 400, desiredHeight: 300 };
-    case 'SmartTAG HD200L Red':
-      return { desiredWidth: 800, desiredHeight: 480 };
-    case 'SmartTAG HD300 Red':
-      return { desiredWidth: 1304, desiredHeight: 984 };
-    default:
-      return { desiredWidth: 768, desiredHeight: 920 };
-  }
-}
-export function getMatchingLabels(codcod: any, pricer: any, logger: any) {
-  // Extract and sanitize itemSet from `Codcod` data
-  let itemSet: Set<string>;
-  if (codcod.Items) {
-    // Create a set of item barcodes from Codcod
-    itemSet = new Set(
-      codcod.Items.map((item: { barcode: string }) =>
-        item.barcode.replace(/^1?/, ''),
-      ),
-    );
-  } else if (codcod.promos) {
-    // Create a set of promo numbers from Codcod, removing prefixed '1'
-    itemSet = new Set(
-      codcod.promos.map((promo: { promonum: string }) =>
-        promo.promonum.replace(/^1/, ''),
-      ),
-    );
-  } else {
-    logger.warn('No items or promos found in Codcod data');
-    return [];
-  }
-
-  // Match `Pricer` data by normalizing IDs (removing any prefixes like 'I' or 'P')
-  const matchingLabels = pricer.filter((label: { links: any[] }) =>
-    label.links.some((link: { itemId: string }) =>
-      itemSet.has(link.itemId.replace(/^[IP]/, '')),
-    ),
-  );
-
-  // Map the matched labels to desired format
-  const result = matchingLabels.map(
-    (label: { links: { itemId: string }[]; modelName: any }) => ({
-      itemId: label.links[0].itemId, // Keep the existing itemId with its original prefix here
-      modelName: label.modelName,
-    }),
-  );
-
-  return result;
-}
+import {
+  addHoursToUtcTime,
+  getDesiredSize,
+  getMatchingLabels,
+} from 'src/codcod/helpers/helpers';
 
 @Injectable()
 export class GatewayService {
@@ -86,20 +27,20 @@ export class GatewayService {
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processUpdates(): Promise<void> {
     const lastUpdateTime = new Date().toISOString();
-    const updatedTime = addHoursToUtcTime(lastUpdateTime, 3);
+    const updatedTime = addHoursToUtcTime(lastUpdateTime, -112);
 
     this.logger.log(`Processing updates since ${updatedTime}`);
 
     try {
       // Fetch updated items from Codcod
       const codcodItems =
-        (await this.codcodService.getUpdatedItems(
-          lastUpdateTime,
+        (await this.codcodService.getAllBranchItems(
+          // updatedTime,
           this.storeId,
         )) || [];
       const codcodPromos =
-        (await this.codcodService.getUpdatedPromos(
-          lastUpdateTime,
+        (await this.codcodService.getAllBranchPromos(
+          // updatedTime,
           this.storeId,
         )) || [];
 
@@ -141,44 +82,34 @@ export class GatewayService {
   ): Promise<void> {
     for (const { itemId, modelName } of itemIds) {
       const { desiredWidth, desiredHeight } = getDesiredSize(modelName);
-      let nameFunction: string;
       let size = '768X960';
-      let itemIdWithoutPrefix = itemId; // Start with the original ID
+      let fetchId = itemId; // Start with the original ID for fetching
 
-      // Determine the function based on itemId prefix
+      // Determine the prefix handling for fetching
       if (itemId.startsWith('I')) {
-        nameFunction = 'getItemSign';
-        itemIdWithoutPrefix = itemId.replace(/^I/, ''); // Remove 'I'
+        fetchId = itemId; // Original ID remains unchanged
       } else if (itemId.startsWith('P')) {
-        nameFunction = 'getPromoSign';
-        itemIdWithoutPrefix = '1' + itemId.replace(/^P/, ''); // Remove 'P' and add '1'
-      } else {
-        nameFunction = 'getSign';
+        fetchId = 'P1' + itemId.slice(1); // Remove 'P' and append '1'
       }
 
       // Log the current operation
       this.logger.log(
-        `Fetching image for itemId: ${itemId} using function: ${nameFunction}`,
+        `Fetching image for itemId: ${itemId} using function: getSign`,
       );
 
       try {
-        // Remove prefix 'I' or 'P' before processing
-        this.logger.log(
-          `Original ID: ${itemId}, Without Prefix: ${itemIdWithoutPrefix}`,
-        );
+        // Log the fetch ID
+        this.logger.log(`Original ID: ${itemId}, Fetch ID: ${fetchId}`);
 
         // Fetch item image from Codcod
-        const image = await this.codcodService[nameFunction](
-          itemIdWithoutPrefix,
-          size,
-        );
+        const image = await this.codcodService.getSign(fetchId, size);
         if (!image) {
           this.logger.warn(`No image found for itemId: ${itemId}`);
           continue;
         }
 
         this.logger.log(
-          `Image fetched for itemId: ${itemIdWithoutPrefix}. Processing image...`,
+          `Image fetched for fetchId: ${fetchId}. Processing image...`,
         );
 
         const processedImage = await sharp(image)
@@ -190,13 +121,12 @@ export class GatewayService {
 
         // Log before sending to the update method
         this.logger.log(
-          `Sending processed image for itemId: ${itemIdWithoutPrefix} to Pricer`,
+          `Sending processed image for itemId: ${itemId} to Pricer`,
         );
 
-        // Update item image in Pricer without the prefix
+        // Update item image in Pricer with the original item ID
         await this.pricerService.updateLabelImage(
-          itemId,
-          itemIdWithoutPrefix,
+          itemId, // Use original itemId for updating
           0,
           0,
           processedImage,
