@@ -14,6 +14,7 @@ export function addHoursToUtcTime(originalTime: string, hoursToAdd: number): str
       'SmartTAG HD110': { desiredWidth: 400, desiredHeight: 300 },
       'Image': { desiredWidth: 400, desiredHeight: 300 },
       'SmartTAG HD200L Red': { desiredWidth: 800, desiredHeight: 480 },
+      'SmartTAG HD200L Red_2': { desiredWidth: 800, desiredHeight: 480 },
       'SmartTAG HD300 Red': { desiredWidth: 1304, desiredHeight: 984 },
       default: { desiredWidth: 768, desiredHeight: 920 },
     };
