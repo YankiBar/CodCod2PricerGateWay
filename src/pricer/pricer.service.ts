@@ -36,6 +36,38 @@ export class PricerService {
     };
   }
 
+    // New method to fetch original country based on itemID
+  async fetchOriginalCountry(itemId: string): Promise<{ OriginalCountry1?: string; OriginalCountry2?: string }> {
+    const url = this.constructUrl(`items/${itemId}?projection=M`); // Adjust URL to fit your API endpoint for item details
+    this.logger.log(`Fetching original country for itemId: ${itemId}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: {
+            Accept: 'application/json',
+          },
+          ...this.createAuthHeaders(),
+        }),
+      );
+
+      // Check if the response contains expected field
+      if (!response.data || !response.data.properties) {
+        this.logger.warn(`No original country found for itemId: ${itemId}`);
+        return {};
+      }
+
+      return {
+        OriginalCountry1: response.data.properties.OriginalCountry1,
+        OriginalCountry2: response.data.properties.OriginalCountry2,
+      };
+    } catch (error: any) {
+      this.logger.error(`Error fetching original country for itemId ${itemId}: ${error.message}`, error.stack);
+      throw new Error(`Failed to fetch original country for itemId: ${itemId}`);
+    }
+  }
+}
+
   async fetchLabels(
     start: number,
     limit: number = this.defaultLimit,

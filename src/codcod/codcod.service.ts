@@ -185,8 +185,10 @@ export class CodcodService {
     }
   }
 
-  async getSign(itemid: string, size: string): Promise<Buffer> {
-    const url = `${this.MediaBaseURL}/getsignA?StoreID=${this.storeId}&itemid=${itemid}&size=${size}`;
+  async getSign(itemid: string, size: string, country?: string): Promise<Buffer> {
+    const url = `${this.MediaBaseURL}/getsignA?StoreID=${this.storeId}&itemid=${itemid}&size=${size}${country ? `&country=${country}` : ''}`;
+      this.logger.log(`Attempting to fetch sign from: ${url}`);
+
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -204,76 +206,4 @@ export class CodcodService {
     }
   }
 
-  // async downloadImageFromService(
-  //   barcode: string,
-  //   size: string,
-  // ): Promise<Buffer> {
-  //   try {
-  //     const imageUrl = `${this.MediaBaseURL}/getsign?StoreID=${this.storeId}&itemid=${barcode}&size=${size}`;
-  //     const response = await lastValueFrom(
-  //       this.httpService.get(imageUrl, {
-  //         responseType: 'arraybuffer',
-  //       }),
-  //     );
-  //     this.logger.log(`Image downloaded for barcode: ${barcode}`);
-  //     return Buffer.from(response.data);
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `Error downloading image for barcode ${barcode}:`,
-  //       error.stack,
-  //     );
-  //     throw new Error(`Failed to download image for ${barcode}`);
-  //   }
-  // }
-  // async fetchImage(
-  //   itemid: number,
-  //   size: string,
-  // ): Promise<Buffer> {
-  //   let image: Buffer;
-
-  //   if (itemid.startsWith('I')) {
-  //     const response = await this.getItemSign(`${'I'}itemid`, size);
-  //     image = Buffer.from(response.data);
-  //   } else if (itemid.startsWith('P')) {
-  //     const response = await this.getPromoSign(`${'P'}itemid`, size);
-  //     image = Buffer.from(response.data);
-  //   } else {
-  //     const response = await this.getSign(itemid, size, StoreID);
-  //     image = Buffer.from(response.data);
-  //   }
-
-  //   return image;
-  // }
-
-  //   async fetchItemImage(itemid: string, size: string): Promise<Buffer> {
-  //     try {
-  //       const response = await this.getItemSign(itemid, size);
-
-  //       if (!response) {
-  //         this.logger.warn(`No data received for itemId: ${itemid}`);
-  //         throw new Error(`Failed to fetch image data for ${itemid}`);
-  //       } else if (!response) {
-  //         this.logger.warn(
-  //           `There is No response.data received for itemId: ${itemid}`,
-  //         );
-  //         throw new Error(`Failed to fetch response.data for ${itemid}`);
-  //       }
-
-  //       // The response should already be a Buffer if it's an array buffer
-  //       const imageBuffer = Buffer.from(response);
-
-  //       // Log the buffer length for debugging
-  //       this.logger.log(
-  //         `Image for item ID ${itemid} received, size: ${imageBuffer.length} bytes`,
-  //       );
-
-  //       return imageBuffer;
-  //     } catch (error) {
-  //       this.logger.error(
-  //         `Error fetching image for barcode: ${itemid}`,
-  //         error.stack,
-  //       );
-  //       throw error;
-  //     }
-  //   }
 }

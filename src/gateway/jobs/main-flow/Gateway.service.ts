@@ -11,6 +11,70 @@ import {
   getMatchingLabels,
 } from 'src/codcod/helpers/helpers';
 
+private countryCodeMap = {
+  ישראל: 'IL',
+  איטליה: 'IT',
+  אנגליה: 'EN',
+  בריטניה: 'GB',
+  גרמניה: 'DE',
+  דנמרק: 'DK',
+  דרום אפריקה: 'ZA',
+  הולנד: 'NL',
+  טורקיה: 'TR',
+  ליטא: 'LT',
+  ניו זילנד: 'NZ',
+  סין: 'CN',
+  ספרד: 'ES',
+  צרפת: 'FR',
+  שוויץ: 'CH',
+  ארגנטינה: 'AR',
+  ארצות הברית: 'US',
+  הודו: 'IN',
+  הונגריה: 'HU',
+  הרפובליקה הדומיניקנית: 'DO',
+  חוף השנהב: 'CI',
+  יוון: 'GR',
+  ירדן: 'JO',
+  מולדובה: 'MD',
+  סרי לנקה: 'LK',
+  פולין: 'PL',
+  פרו: 'PE',
+  צ׳ילה: 'CL',
+  קוסטה ריקה: 'CR',
+  קנדה: 'CA',
+  קניה: 'KE'
+};
+
+async processAndUpdateImage(
+  image: Buffer,
+  itemId: string,
+  pageIndex: number,
+  desiredWidth: number,
+  desiredHeight: number
+): Promise < void> {
+  try {
+    const processedImage = await sharp(image)
+      .rotate(270)
+      .resize(desiredWidth, desiredHeight, {
+        fit: 'fill',
+      })
+      .toBuffer();
+
+    await this.pricerService.updateLabelImage(
+      itemId,
+      pageIndex,
+      0,
+      processedImage,
+    );
+
+    this.logger.log(`Successfully updated image for itemId: ${itemId}, pageIndex: ${pageIndex}`);
+  } catch(error) {
+    this.logger.error(`Error processing and updating image for itemId: ${itemId}, pageIndex: ${pageIndex}`, error.stack);
+    throw error;
+  }
+}
+
+
 @Injectable()
 export class GatewayService {
   private readonly logger = new MyLogger();
@@ -77,65 +141,52 @@ export class GatewayService {
     }
   }
 
-  async processImages(
-    itemIds: { itemId: string; modelName: string }[],
-  ): Promise<void> {
+  async processImages(itemIds: { itemId: string; modelName: string }[]): Promise<void> {
     for (const { itemId, modelName } of itemIds) {
       const { desiredWidth, desiredHeight } = getDesiredSize(modelName);
       let size = '768X960';
-      let fetchId = itemId; // Start with the original ID for fetching
+      let fetchId = itemId;
 
-      // Determine the prefix handling for fetching
+      const { OriginalCountry1, OriginalCountry2 } = await this.pricerService.fetchOriginalCountry(itemId);
+      const country1Code = this.countryCodeMap[OriginalCountry1] || null;
+      const country2Code = this.countryCodeMap[OriginalCountry2] || null;
+
       if (itemId.startsWith('I')) {
-        fetchId = itemId; // Original ID remains unchanged
+        fetchId = itemId;
       } else if (itemId.startsWith('P')) {
-        fetchId = 'P1' + itemId.slice(1); // Remove 'P' and append '1'
+        fetchId = 'P1' + itemId.slice(1);
       }
 
-      // Log the current operation
-      this.logger.log(
-        `Fetching image for itemId: ${itemId} using function: getSign`,
-      );
+        try {
+      const countryCodes = [country1Code, country2Code].filter(Boolean);
 
-      try {
-        // Log the fetch ID
-        this.logger.log(`Original ID: ${itemId}, Fetch ID: ${fetchId}`);
+      if (countryCodes.length > 0) {
+        for (const [index, countryCode] of countryCodes.entries()) {
+          this.logger.log(`Fetching image for itemId: ${itemId} with country code: ${countryCode}`);
 
-        // Fetch item image from Codcod
-        const image = await this.codcodService.getSign(fetchId, size);
-        if (!image) {
-          this.logger.warn(`No image found for itemId: ${itemId}`);
+          const countryImage = await this.codcodService.getSign(fetchId, size, countryCode);
+          if (!countryImage) {
+            this.logger.warn(`No image found for itemId: ${itemId} with country code: ${countryCode}`);
+            continue;
+          }
+
+          await this.processAndUpdateImage(countryImage, itemId, index, desiredWidth, desiredHeight);
+        }
+      } else {
+        // Always fetch and process the default image if no country-specific images
+        this.logger.log(`Fetching default image for itemId: ${itemId}`);
+        const defaultImage = await this.codcodService.getSign(fetchId, size);
+        if (!defaultImage) {
+          this.logger.warn(`No default image found for itemId: ${itemId}`);
           continue;
         }
 
-        this.logger.log(
-          `Image fetched for fetchId: ${fetchId}. Processing image...`,
-        );
-
-        const processedImage = await sharp(image)
-          .rotate(270) // Rotate image 90 degrees to the left
-          .resize(desiredWidth, desiredHeight, {
-            fit: 'fill',
-          })
-          .toBuffer();
-
-        // Log before sending to the update method
-        this.logger.log(
-          `Sending processed image for itemId: ${itemId} to Pricer`,
-        );
-
-        // Update item image in Pricer with the original item ID
-        await this.pricerService.updateLabelImage(
-          itemId, // Use original itemId for updating
-          0,
-          0,
-          processedImage,
-        );
-
-        this.logger.log(`Successfully updated image for itemId: ${itemId}`);
-      } catch (error) {
-        this.logger.error(`Error processing itemId: ${itemId}`, error.stack);
+        await this.processAndUpdateImage(defaultImage, itemId, 0, desiredWidth, desiredHeight);
       }
+
+    } catch (error) {
+      this.logger.error(`Error processing itemId: ${itemId}`, error.stack);
     }
   }
+}
 }
