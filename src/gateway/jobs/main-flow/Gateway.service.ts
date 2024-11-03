@@ -8,6 +8,8 @@ import {
   addHoursToUtcTime,
   getDesiredSize,
   getMatchingLabels,
+  countryCodeMap
+
 } from 'src/codcod/helpers/helpers';
 
 @Injectable()
@@ -15,40 +17,39 @@ export class GatewayService {
   private readonly logger = new MyLogger();
   private readonly storeId: string;
 
-  // Moved country code map inside the class and marked as a private property
-  private countryCodeMap = {
-    ישראל: 'IL',
-    איטליה: 'IT',
-    אנגליה: 'EN',
-    בריטניה: 'GB',
-    גרמניה: 'DE',
-    דנמרק: 'DK',
-    'דרום אפריקה': 'ZA',
-    הולנד: 'NL',
-    טורקיה: 'TR',
-    ליטא: 'LT',
-    'ניו זילנד': 'NZ',
-    סין: 'CN',
-    ספרד: 'ES',
-    צרפת: 'FR',
-    שוויץ: 'CH',
-    ארגנטינה: 'AR',
-    'ארצות הברית': 'US',
-    הודו: 'IN',
-    הונגריה: 'HU',
-    'הרפובליקה הדומיניקנית': 'DO',
-    'חוף השנהב': 'CI',
-    יוון: 'GR',
-    ירדן: 'JO',
-    מולדובה: 'MD',
-    'סרי לנקה': 'LK',
-    פולין: 'PL',
-    פרו: 'PE',
-    'צ׳ילה': 'CL',
-    'קוסטה ריקה': 'CR',
-    קנדה: 'CA',
-    קניה: 'KE',
-  };
+  // private countryCodeMap = {
+  //   ישראל: 'IL',
+  //   איטליה: 'IT',
+  //   אנגליה: 'EN',
+  //   בריטניה: 'GB',
+  //   גרמניה: 'DE',
+  //   דנמרק: 'DK',
+  //   'דרום אפריקה': 'ZA',
+  //   הולנד: 'NL',
+  //   טורקיה: 'TR',
+  //   ליטא: 'LT',
+  //   'ניו זילנד': 'NZ',
+  //   סין: 'CN',
+  //   ספרד: 'ES',
+  //   צרפת: 'FR',
+  //   שוויץ: 'CH',
+  //   ארגנטינה: 'AR',
+  //   'ארצות הברית': 'US',
+  //   הודו: 'IN',
+  //   הונגריה: 'HU',
+  //   'הרפובליקה הדומיניקנית': 'DO',
+  //   'חוף השנהב': 'CI',
+  //   יוון: 'GR',
+  //   ירדן: 'JO',
+  //   מולדובה: 'MD',
+  //   'סרי לנקה': 'LK',
+  //   פולין: 'PL',
+  //   פרו: 'PE',
+  //   'צ׳ילה': 'CL',
+  //   'קוסטה ריקה': 'CR',
+  //   קנדה: 'CA',
+  //   קניה: 'KE',
+  // };
 
   constructor(
     private readonly codcodService: CodcodService,
@@ -112,8 +113,8 @@ export class GatewayService {
         const { OriginalCountry1, OriginalCountry2 } =
           await this.pricerService.fetchOriginalCountry(itemId);
         const countryCodes = [
-          this.countryCodeMap[OriginalCountry1] || null,
-          this.countryCodeMap[OriginalCountry2] || null,
+          countryCodeMap[OriginalCountry1] || null,
+          countryCodeMap[OriginalCountry2] || null,
         ].filter(Boolean);
 
         if (countryCodes.length > 0) {
