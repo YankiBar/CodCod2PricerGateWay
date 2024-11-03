@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, lastValueFrom } from 'rxjs';
-import { json } from 'stream/consumers';
 import { MyLogger } from 'src/logger';
 
 @Injectable()
@@ -185,9 +184,13 @@ export class CodcodService {
     }
   }
 
-  async getSign(itemid: string, size: string, country?: string): Promise<Buffer> {
+  async getSign(
+    itemid: string,
+    size: string,
+    country?: string,
+  ): Promise<Buffer> {
     const url = `${this.MediaBaseURL}/getsignA?StoreID=${this.storeId}&itemid=${itemid}&size=${size}${country ? `&country=${country}` : ''}`;
-      this.logger.log(`Attempting to fetch sign from: ${url}`);
+    this.logger.log(`Attempting to fetch sign from: ${url}`);
 
     try {
       const response = await firstValueFrom(
@@ -205,5 +208,4 @@ export class CodcodService {
       throw new Error(`Failed to fetch sign for ${itemid}`);
     }
   }
-
 }

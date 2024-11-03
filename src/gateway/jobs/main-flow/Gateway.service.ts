@@ -8,48 +8,13 @@ import {
   addHoursToUtcTime,
   getDesiredSize,
   getMatchingLabels,
-  countryCodeMap
-
+  countryCodeMap,
 } from 'src/codcod/helpers/helpers';
 
 @Injectable()
 export class GatewayService {
   private readonly logger = new MyLogger();
   private readonly storeId: string;
-
-  // private countryCodeMap = {
-  //   ישראל: 'IL',
-  //   איטליה: 'IT',
-  //   אנגליה: 'EN',
-  //   בריטניה: 'GB',
-  //   גרמניה: 'DE',
-  //   דנמרק: 'DK',
-  //   'דרום אפריקה': 'ZA',
-  //   הולנד: 'NL',
-  //   טורקיה: 'TR',
-  //   ליטא: 'LT',
-  //   'ניו זילנד': 'NZ',
-  //   סין: 'CN',
-  //   ספרד: 'ES',
-  //   צרפת: 'FR',
-  //   שוויץ: 'CH',
-  //   ארגנטינה: 'AR',
-  //   'ארצות הברית': 'US',
-  //   הודו: 'IN',
-  //   הונגריה: 'HU',
-  //   'הרפובליקה הדומיניקנית': 'DO',
-  //   'חוף השנהב': 'CI',
-  //   יוון: 'GR',
-  //   ירדן: 'JO',
-  //   מולדובה: 'MD',
-  //   'סרי לנקה': 'LK',
-  //   פולין: 'PL',
-  //   פרו: 'PE',
-  //   'צ׳ילה': 'CL',
-  //   'קוסטה ריקה': 'CR',
-  //   קנדה: 'CA',
-  //   קניה: 'KE',
-  // };
 
   constructor(
     private readonly codcodService: CodcodService,
