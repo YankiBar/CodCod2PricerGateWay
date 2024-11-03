@@ -3,7 +3,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { CodcodService } from 'src/codcod/codcod.service';
 import { PricerService } from 'src/pricer/pricer.service';
 import { ConfigService } from '@nestjs/config';
-import * as sharp from 'sharp';
 import { MyLogger } from '../../../logger';
 import {
   addHoursToUtcTime,
@@ -15,40 +14,40 @@ import {
 export class GatewayService {
   private readonly logger = new MyLogger();
   private readonly storeId: string;
-  
+
   // Moved country code map inside the class and marked as a private property
   private countryCodeMap = {
-    'ישראל': 'IL',
-    'איטליה': 'IT',
-    'אנגליה': 'EN',
-    'בריטניה': 'GB',
-    'גרמניה': 'DE',
-    'דנמרק': 'DK',
+    ישראל: 'IL',
+    איטליה: 'IT',
+    אנגליה: 'EN',
+    בריטניה: 'GB',
+    גרמניה: 'DE',
+    דנמרק: 'DK',
     'דרום אפריקה': 'ZA',
-    'הולנד': 'NL',
-    'טורקיה': 'TR',
-    'ליטא': 'LT',
+    הולנד: 'NL',
+    טורקיה: 'TR',
+    ליטא: 'LT',
     'ניו זילנד': 'NZ',
-    'סין': 'CN',
-    'ספרד': 'ES',
-    'צרפת': 'FR',
-    'שוויץ': 'CH',
-    'ארגנטינה': 'AR',
+    סין: 'CN',
+    ספרד: 'ES',
+    צרפת: 'FR',
+    שוויץ: 'CH',
+    ארגנטינה: 'AR',
     'ארצות הברית': 'US',
-    'הודו': 'IN',
-    'הונגריה': 'HU',
+    הודו: 'IN',
+    הונגריה: 'HU',
     'הרפובליקה הדומיניקנית': 'DO',
     'חוף השנהב': 'CI',
-    'יוון': 'GR',
-    'ירדן': 'JO',
-    'מולדובה': 'MD',
+    יוון: 'GR',
+    ירדן: 'JO',
+    מולדובה: 'MD',
     'סרי לנקה': 'LK',
-    'פולין': 'PL',
-    'פרו': 'PE',
+    פולין: 'PL',
+    פרו: 'PE',
     'צ׳ילה': 'CL',
     'קוסטה ריקה': 'CR',
-    'קנדה': 'CA',
-    'קניה': 'KE'
+    קנדה: 'CA',
+    קניה: 'KE',
   };
 
   constructor(
@@ -59,7 +58,7 @@ export class GatewayService {
     this.storeId = this.configService.get<string>('STORE_ID');
   }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async processUpdates(): Promise<void> {
     const lastUpdateTime = new Date().toISOString();
     const updatedTime = addHoursToUtcTime(lastUpdateTime, -112);
@@ -67,15 +66,29 @@ export class GatewayService {
     this.logger.log(`Processing updates since ${updatedTime}`);
 
     try {
-      const codcodItems = (await this.codcodService.getAllBranchItems(this.storeId)) || [];
-      const codcodPromos = (await this.codcodService.getAllBranchPromos(this.storeId)) || [];
+      const codcodItems =
+        (await this.codcodService.getAllBranchItems(this.storeId)) || [];
+      const codcodPromos =
+        (await this.codcodService.getAllBranchPromos(this.storeId)) || [];
       const allLabels = await this.pricerService.getAllLabelsInStore();
 
-      const filteredItemIds = getMatchingLabels(codcodItems, allLabels, this.logger);
-      const filteredPromoIds = getMatchingLabels(codcodPromos, allLabels, this.logger);
+      const filteredItemIds = getMatchingLabels(
+        codcodItems,
+        allLabels,
+        this.logger,
+      );
+      const filteredPromoIds = getMatchingLabels(
+        codcodPromos,
+        allLabels,
+        this.logger,
+      );
 
-      this.logger.log('Filtered Items: ' + JSON.stringify(filteredItemIds, null, 2));
-      this.logger.log('Filtered Promos: ' + JSON.stringify(filteredPromoIds, null, 2));
+      this.logger.log(
+        'Filtered Items: ' + JSON.stringify(filteredItemIds, null, 2),
+      );
+      this.logger.log(
+        'Filtered Promos: ' + JSON.stringify(filteredPromoIds, null, 2),
+      );
 
       await Promise.all([
         this.processImages(filteredItemIds),
@@ -88,30 +101,48 @@ export class GatewayService {
     }
   }
 
-  async processImages(itemIds: { itemId: string; modelName: string }[]): Promise<void> {
+  async processImages(
+    itemIds: { itemId: string; modelName: string }[],
+  ): Promise<void> {
     for (const { itemId, modelName } of itemIds) {
-      const { desiredWidth, desiredHeight } = getDesiredSize(modelName);
-      let size = '768X960';
+      const size = getDesiredSize(modelName);
       let fetchId = itemId.startsWith('P') ? 'P1' + itemId.slice(1) : itemId;
 
       try {
-        const { OriginalCountry1, OriginalCountry2 } = await this.pricerService.fetchOriginalCountry(itemId);
+        const { OriginalCountry1, OriginalCountry2 } =
+          await this.pricerService.fetchOriginalCountry(itemId);
         const countryCodes = [
           this.countryCodeMap[OriginalCountry1] || null,
-          this.countryCodeMap[OriginalCountry2] || null
+          this.countryCodeMap[OriginalCountry2] || null,
         ].filter(Boolean);
 
         if (countryCodes.length > 0) {
           for (const [index, countryCode] of countryCodes.entries()) {
-            this.logger.log(`Fetching image for itemId: ${itemId} with country code: ${countryCode}`);
+            this.logger.log(
+              `Fetching image for itemId: ${itemId} with country code: ${countryCode}`,
+            );
 
-            const countryImage = await this.codcodService.getSign(fetchId, size, countryCode);
+            const countryImage = await this.codcodService.getSign(
+              fetchId,
+              size,
+              countryCode,
+            );
             if (!countryImage) {
-              this.logger.warn(`No image found for itemId: ${itemId} with country code: ${countryCode}`);
+              this.logger.warn(
+                `No image found for itemId: ${itemId} with country code: ${countryCode}`,
+              );
               continue;
             }
 
-            await this.processAndUpdateImage(countryImage, itemId, index, desiredWidth, desiredHeight);
+            await this.pricerService.updateLabelImage(
+              itemId,
+              index,
+              0,
+              countryImage,
+            );
+            this.logger.log(
+              `Successfully updated image for itemId: ${itemId}, pageIndex: ${index}`,
+            );
           }
         } else {
           // If no country-specific images, fetch and process the default image
@@ -122,32 +153,11 @@ export class GatewayService {
             continue;
           }
 
-          await this.processAndUpdateImage(defaultImage, itemId, 0, desiredWidth, desiredHeight);
+          await this.pricerService.updateLabelImage(itemId, 0, 0, defaultImage);
         }
       } catch (error) {
         this.logger.error(`Error processing itemId: ${itemId}`, error.stack);
       }
-    }
-  }
-
-  async processAndUpdateImage(
-    image: Buffer,
-    itemId: string,
-    pageIndex: number,
-    desiredWidth: number,
-    desiredHeight: number
-  ): Promise<void> {
-    try {
-      const processedImage = await sharp(image)
-        .rotate(270)
-        .resize(desiredWidth, desiredHeight, { fit: 'fill' })
-        .toBuffer();
-
-      await this.pricerService.updateLabelImage(itemId, pageIndex, 0, processedImage);
-      this.logger.log(`Successfully updated image for itemId: ${itemId}, pageIndex: ${pageIndex}`);
-    } catch (error) {
-      this.logger.error(`Error processing and updating image for itemId: ${itemId}, pageIndex: ${pageIndex}`, error.stack);
-      throw error;
     }
   }
 }

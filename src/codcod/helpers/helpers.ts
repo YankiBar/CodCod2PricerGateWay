@@ -5,18 +5,15 @@ export function addHoursToUtcTime(originalTime: string, hoursToAdd: number): str
   }
   
   // Function to get desired image dimensions based on model name
-  export function getDesiredSize(modelName: string): {
-    desiredWidth: number;
-    desiredHeight: number;
-  } {
+  export function getDesiredSize(modelName: string): string {
     const sizes = {
-      'SmartTAG HDL Red 1328': { desiredWidth: 296, desiredHeight: 128 },
-      'SmartTAG HD110': { desiredWidth: 400, desiredHeight: 300 },
-      'Image': { desiredWidth: 400, desiredHeight: 300 },
-      'SmartTAG HD200L Red': { desiredWidth: 800, desiredHeight: 480 },
-      'SmartTAG HD200L Red_2': { desiredWidth: 800, desiredHeight: 480 },
-      'SmartTAG HD300 Red': { desiredWidth: 1304, desiredHeight: 984 },
-      default: { desiredWidth: 768, desiredHeight: 920 },
+      'SmartTAG HDL Red 1328': '296x128',
+      'SmartTAG HD110': '400x300',
+      'Image': '400x300',
+      'SmartTAG HD200L Red': '800x480',
+      'SmartTAG HD200L Red_2': '800x480',
+      'SmartTAG HD300 Red': '984x1304',
+      default: '768x920',
     };
     return sizes[modelName] || sizes.default;
   }
