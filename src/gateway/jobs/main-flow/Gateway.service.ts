@@ -27,15 +27,21 @@ export class GatewayService {
   @Cron(CronExpression.EVERY_10_MINUTES)
   async processUpdates(): Promise<void> {
     const lastUpdateTime = new Date().toISOString();
-    const updatedTime = addHoursToUtcTime(lastUpdateTime, -112);
+    const updatedTime = addHoursToUtcTime(lastUpdateTime, 2);
 
     this.logger.log(`Processing updates since ${updatedTime}`);
 
     try {
       const codcodItems =
-        (await this.codcodService.getAllBranchItems(this.storeId)) || [];
+        (await this.codcodService.getUpdatedItems(
+          lastUpdateTime,
+          this.storeId,
+        )) || [];
       const codcodPromos =
-        (await this.codcodService.getAllBranchPromos(this.storeId)) || [];
+        (await this.codcodService.getUpdatedPromos(
+          lastUpdateTime,
+          this.storeId,
+        )) || [];
       const allLabels = await this.pricerService.getAllLabelsInStore();
 
       const filteredItemIds = getMatchingLabels(
