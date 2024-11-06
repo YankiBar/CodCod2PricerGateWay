@@ -10,13 +10,14 @@ export function addHoursToUtcTime(
 // Function to get desired image dimensions based on model name
 export function getDesiredSize(modelName: string): string {
   const sizes = {
-    'SmartTAG HDL Red 1328': '296x128',
+    'SmartTAG HDL Red': '296x128',
     'SmartTAG HD110': '400x300',
-    Image: '400x300',
-    'SmartTAG HD200L Red': '800x480',
+    'SmartTAG HD200L Red_1': '800x480',
     'SmartTAG HD200L Red_2': '800x480',
-    'SmartTAG HD300 Red': '984x1304',
-    default: '768x920',
+    'SmartTAG HD300 Red_1': '984x1304',
+    'SmartTAG HD300 Red_2': '984x1304',
+
+    default: '800x480',
   };
   return sizes[modelName] || sizes.default;
 }
