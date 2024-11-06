@@ -24,7 +24,7 @@ export class GatewayService {
     this.storeId = this.configService.get<string>('STORE_ID');
   }
 
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async processUpdates(): Promise<void> {
     const lastUpdateTime = new Date().toISOString();
     const updatedTime = addHoursToUtcTime(lastUpdateTime, 2);
@@ -33,33 +33,40 @@ export class GatewayService {
 
     try {
       const codcodItems =
-        (await this.codcodService.getUpdatedItems(
-          lastUpdateTime,
+        (await this.codcodService.getAllBranchItems(
+          // lastUpdateTime,
           this.storeId,
         )) || [];
       const codcodPromos =
-        (await this.codcodService.getUpdatedPromos(
-          lastUpdateTime,
+        (await this.codcodService.getAllBranchPromos(
+          // lastUpdateTime,
           this.storeId,
         )) || [];
             
-      const existingItems = await this.pricerService.getAllItemIds();
-      const existingItemIds = existingItems.map(item => item.itemId);
-
-      // Check updated items from Codcod and update them in Pricer Service
-      for (const item of codcodItems) {
-        if (!existingItemIds.includes(item.barcode)) {
-          await this.pricerService.updateItem(item.barcode, item.dsc);
+        const existingItems = await this.pricerService.getAllItemIds();
+        const existingItemIds = new Set(existingItems.map(item => item.itemId));
+    
+        const updatePromises: Promise<void>[] = [];
+        
+        // Update branch items
+        for (const item of codcodItems) {
+          if (!existingItemIds.has(item.barcode)) {
+            updatePromises.push(this.pricerService.updateItem(item.barcode, item.dsc));
+          }
         }
-      }
-
-      // Check updated promos, prefixing with "P" if they don't exist
-      for (const promo of codcodPromos) {
-        const prefixedPromoId = `P${promo.promonum}`;
-        if (!existingItemIds.includes(prefixedPromoId)) {
-          await this.pricerService.updateItem(prefixedPromoId, promo.dsc);
+    
+        // Update promos
+        for (const promo of codcodPromos) {
+          const prefixedPromoId = `P${promo.promonum}`;
+          if (!existingItemIds.has(prefixedPromoId)) {
+            updatePromises.push(this.pricerService.updateItem(prefixedPromoId, promo.dsc));
+          }
         }
-      }
+    
+        // Wait for all updates to complete
+        await Promise.all(updatePromises);
+    
+    
       
       const allLabels = await this.pricerService.getAllLabelsInStore();
 

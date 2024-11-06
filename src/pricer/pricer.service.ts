@@ -97,22 +97,63 @@ export class PricerService {
     }
   }
 
-  // New method to get all item IDs
   async getAllItemIds(): Promise<any[]> {
-    const url = this.constructUrl('items?start=0&limit=500');
+    const allItems: any[] = [];
+    let start = 0;
+    const limit = this.defaultLimit;
+  
+    try {
+      while (true) {
+        const response = await this.fetchItems(start, limit); // New fetch method for items
+  
+        // Check if the response is valid and is an array
+        if (!response || !Array.isArray(response)) {
+          this.logger.warn('No items found in response.');
+          break; // Exit if there are no valid items
+        }
+  
+        // Append fetched items to the allItems array
+        allItems.push(...response);
+  
+        this.logger.log(`Fetched ${response.length} items, total collected: ${allItems.length}`);
+  
+        // If the number of items fetched is less than the limit, stop fetching
+        if (response.length < limit) {
+          this.logger.log('No more items to fetch, completing the operation.');
+          break;
+        }
+  
+        // Increment the start position for pagination
+        start += limit;
+      }
+  
+      return allItems;
+    } catch (error: any) {
+      this.logger.error('Error fetching all item IDs:', error.stack);
+      throw new Error('Failed to fetch all item IDs.');
+    }
+  }
+  
+  // New helper method to fetch items with pagination
+  private async fetchItems(start: number, limit: number): Promise<any[]> {
+    const url = this.constructUrl('items');
+    this.logger.log(`Fetching items from ${url} with start=${start}, limit=${limit}`);
+  
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
+          params: { start, limit },
           headers: {
             Accept: 'application/json',
           },
           ...this.createAuthHeaders(),
         }),
       );
-      return response.data; // Assuming the response contains the item list directly
-    } catch (error) {
-      this.logger.error(`Error fetching all item IDs: ${error.message}`, error.stack);
-      throw error;
+  
+      return response.data; // Expected to return array of items
+    } catch (error: any) {
+      this.logger.error(`Error fetching items from Pricer: ${error.message}`, error.stack);
+      throw new Error(`Failed to fetch items: ${error.message}`);
     }
   }
 
