@@ -72,6 +72,50 @@ export class PricerService {
     }
   }
 
+    // New method to patch item details
+  async updateItem(itemId: string, itemName: string): Promise<void> {
+    const url = this.constructUrl('items');
+    const payload = [{
+      itemId: itemId,
+      itemName: itemName
+    }];
+
+    try {
+      await firstValueFrom(
+        this.httpService.patch(url, payload, {
+          headers: {
+            Accept: '*/*',
+            'Content-Type': 'application/json',
+          },
+          ...this.createAuthHeaders(),
+        }),
+      );
+      this.logger.log(`Updated item with ID: ${itemId}`);
+    } catch (error) {
+      this.logger.error(`Error updating item: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  // New method to get all item IDs
+  async getAllItemIds(): Promise<any[]> {
+    const url = this.constructUrl('items?start=0&limit=500');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: {
+            Accept: 'application/json',
+          },
+          ...this.createAuthHeaders(),
+        }),
+      );
+      return response.data; // Assuming the response contains the item list directly
+    } catch (error) {
+      this.logger.error(`Error fetching all item IDs: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   async fetchLabels(
     start: number,
     limit: number = this.defaultLimit,

@@ -42,6 +42,25 @@ export class GatewayService {
           lastUpdateTime,
           this.storeId,
         )) || [];
+            
+      const existingItems = await this.pricerService.getAllItemIds();
+      const existingItemIds = existingItems.map(item => item.itemId);
+
+      // Check updated items from Codcod and update them in Pricer Service
+      for (const item of codcodItems) {
+        if (!existingItemIds.includes(item.barcode)) {
+          await this.pricerService.updateItem(item.barcode, item.dsc);
+        }
+      }
+
+      // Check updated promos, prefixing with "P" if they don't exist
+      for (const promo of codcodPromos) {
+        const prefixedPromoId = `P${promo.promonum}`;
+        if (!existingItemIds.includes(prefixedPromoId)) {
+          await this.pricerService.updateItem(prefixedPromoId, promo.dsc);
+        }
+      }
+      
       const allLabels = await this.pricerService.getAllLabelsInStore();
 
       const filteredItemIds = getMatchingLabels(
