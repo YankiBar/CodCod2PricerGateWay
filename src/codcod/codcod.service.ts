@@ -33,10 +33,11 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
 
-      if (responseData?.data) {
-        // responseData.data.Items.forEach((item: any, index: number) => {
-        //   console.log(`Branch Item ${index}:`, JSON.stringify(item, null, 2));
-        // });
+    if (responseData?.data?.Items) {
+      // Iterate over the Items array if you need to log or process individual items
+      responseData.data.Items.forEach((item: any, index: number) => {
+        this.logger.log(`Branch Item ${index}: ${JSON.stringify(item, null, 2)}`);
+      });
         return responseData.data;
       } else {
         this.logger.warn('No branch items were found in the response.');
