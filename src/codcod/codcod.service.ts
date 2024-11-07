@@ -33,12 +33,12 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
 
-      if (responseData?.data?.Items) {
+      if (responseData?.data) {
         // Log the items for debugging purposes
         // responseData.data.Items.forEach((item: any, index: number) => {
         //   this.logger.log(`Branch Item ${index}: ${JSON.stringify(item, null, 2)}`);
         // });
-        return responseData.data.Items; // Change to return responseData.data.Items
+        return responseData.data; // Change to return responseData.data.Items
       } else {
         this.logger.warn('No branch items were found in the response.');
         return [];
@@ -65,8 +65,8 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
 
-      if (responseData?.data?.Items) {
-        return responseData.data.Items; // Adjusted to ensure it returns Items
+      if (responseData?.data) {
+        return responseData.data; 
       } else {
         this.logger.warn('No branch promos were found in the response.');
         return [];
@@ -92,11 +92,11 @@ export class CodcodService {
       const responseData = JSON.parse(
         Buffer.from(response.data).toString('utf-8'),
       );
-      if (responseData?.data?.Items) {
-        responseData.data.Items.forEach((item: any, index: number) => {
-          this.logger.log(`Item ${index}:  ` + JSON.stringify(item, null, 2));
-        });
-        return responseData.data.Items;
+      if (responseData?.data) {
+        // responseData.data.Items.forEach((item: any, index: number) => {
+        //   this.logger.log(`Item ${index}:  ` + JSON.stringify(item, null, 2));
+        // });
+        return responseData.data;
       } else {
         this.logger.warn('No Items were found in the response.');
         return [];
@@ -126,10 +126,10 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
       // Log each item in the Items array
-      if (responseData?.data?.Items) {
-        responseData.data.Items.forEach((item: any, index: number) => {
-          this.logger.log(`Item ${index}: ` + JSON.stringify(item, null, 2));
-        });
+      if (responseData?.data) {
+        // responseData.data.Items.forEach((item: any, index: number) => {
+        //   this.logger.log(`Item ${index}: ` + JSON.stringify(item, null, 2));
+        // });
         return responseData.data;
       } else {
         this.logger.warn('No Promos were found in the response.');

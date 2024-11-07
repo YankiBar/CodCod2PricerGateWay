@@ -42,32 +42,32 @@ export class GatewayService {
           // lastUpdateTime,
           this.storeId,
         )) || [];
-            
-        const existingItems = await this.pricerService.getAllItemIds();
-        const existingItemIds = new Set(existingItems.map(item => item.itemId));
-    
-        const updatePromises: Promise<void>[] = [];
-        
-        // Update branch items
-        for (const item of codcodItems) {
-          if (!existingItemIds.has(item.barcode)) {
-            updatePromises.push(this.pricerService.updateItem(item.barcode, item.dsc));
-          }
+
+      const existingItems = await this.pricerService.getAllItemIds();
+      const existingItemIds = new Set(existingItems.map(item => item.itemId));
+
+      const updatePromises: Promise<void>[] = [];
+
+
+      // Update branch items
+      for (const item of codcodItems) {
+        if (!existingItemIds.has(item.barcode)) {
+          updatePromises.push(this.pricerService.updateItem(item.barcode, item.dsc));
         }
-    
-        // Update promos
-        for (const promo of codcodPromos) {
-          const prefixedPromoId = `P${promo.promonum}`;
-          if (!existingItemIds.has(prefixedPromoId)) {
-            updatePromises.push(this.pricerService.updateItem(prefixedPromoId, promo.dsc));
-          }
+      }
+
+      // Update promos
+      for (const promo of codcodPromos) {
+        const prefixedPromoId = `P${promo.promonum}`;
+        if (!existingItemIds.has(prefixedPromoId)) {
+          updatePromises.push(this.pricerService.updateItem(prefixedPromoId, promo.dsc));
         }
-    
-        // Wait for all updates to complete
-        await Promise.all(updatePromises);
-    
-    
-      
+      }
+
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+
+
       const allLabels = await this.pricerService.getAllLabelsInStore();
 
       const filteredItemIds = getMatchingLabels(
