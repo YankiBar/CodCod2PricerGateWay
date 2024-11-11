@@ -2,8 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { MyLogger } from 'src/logger';
 
-const TIME_FILE_PATH = path.join(__dirname, '../../time.txt' )
-
 export function addHoursToUtcTime(
   originalTime: string,
   hoursToAdd: number,
@@ -107,7 +105,6 @@ export const countryCodeMap = {
   קניה: 'KE',
 };
 
-
 export async function updateItemsAndPromos(
   codcodItems: { Items: any[] },
   codcodPromos: { promos: any[] },
@@ -119,13 +116,20 @@ export async function updateItemsAndPromos(
 
   // Ensure there's an entry for items
   if (codcodItems.Items && codcodItems.Items.length > 0) {
-    logger.log(`Starting updates for ${codcodItems.Items.length} branch items.`);
-    
+    logger.log(
+      `Starting updates for ${codcodItems.Items.length} branch items.`,
+    );
+
     // Update branch items
     for (const item of codcodItems.Items) {
+      logger.log(`Checking item with barcode: ${item.barcode}`);
       if (!existingItemIds.has(item.barcode)) {
         logger.log(`Preparing to update item with barcode: ${item.barcode}`); // Log item being processed
         updatePromises.push(updateItemFunction(item.barcode, item.dsc));
+      } else {
+        logger.log(
+          `Item with barcode: ${item.barcode} already exists, skipping update.`,
+        );
       }
     }
   } else {
@@ -135,15 +139,18 @@ export async function updateItemsAndPromos(
   // Ensure there's an entry for promos
   if (codcodPromos.promos && codcodPromos.promos.length > 0) {
     logger.log(`Starting updates for ${codcodPromos.promos.length} promos.`);
-    
+
     // Update promos
     for (const promo of codcodPromos.promos) {
       const prefixedPromoId = `P${promo.promonum}`;
+      logger.log(`Checking promo with ID: ${prefixedPromoId}`);
       if (!existingItemIds.has(prefixedPromoId)) {
-        logger.log(`Preparing to update promo with id: ${prefixedPromoId}`); // Log promo being processed
+        logger.log(`Preparing to update promo with ID: ${prefixedPromoId}`); // Log promo being processed
         updatePromises.push(updateItemFunction(prefixedPromoId, promo.dsc));
       } else {
-        logger.log(`Promo with id: ${prefixedPromoId} already exists, skipping update.`);
+        logger.log(
+          `Promo with ID: ${prefixedPromoId} already exists, skipping update.`,
+        );
       }
     }
   } else {
@@ -153,37 +160,68 @@ export async function updateItemsAndPromos(
   // Wait for all updates to complete
   try {
     await Promise.all(updatePromises);
-    logger.log(`All updates completed. Total updates made: ${updatePromises.length}`);
+    logger.log(
+      `All updates completed. Total updates made: ${updatePromises.length}`,
+    );
   } catch (error) {
     logger.error('Error updating items or promos:', error);
-    // You may choose to log specific failures or handle them differently here
   }
 }
 
- // Function to read the last update time from the file
-export function readLastUpdateTime(): string {
+// Function to read the last update time from the file// Define the path to the `time.json` file
+const TIME_FILE_PATH = path.join(__dirname, '../../time.json');
+
+// Function to read the last update time from the file
+export function readLastUpdateTime(logger: MyLogger): string {
+  logger.log(`Attempting to read last update time from ${TIME_FILE_PATH}...`);
+
   try {
     if (fs.existsSync(TIME_FILE_PATH)) {
-      const timeData = fs.readFileSync(TIME_FILE_PATH, 'utf-8').trim();
-     if (timeData) {
-        return timeData; 
+      logger.log(`File ${TIME_FILE_PATH} exists. Attempting to read...`);
+      const data = fs.readFileSync(TIME_FILE_PATH, 'utf-8').trim();
+
+      if (data) {
+        logger.log(`Successfully read last update time: ${data}`);
+        const match = data.match(/"lastUpdateTime": "(.*)"/);
+        return match
+          ? match[1]
+          : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       }
+
+      logger.warn(`File ${TIME_FILE_PATH} is empty.`);
+    } else {
+      logger.warn(`File ${TIME_FILE_PATH} does not exist.`);
     }
   } catch (error) {
-    console.error(`Error reading last update time: ${error}`);
+    logger.error(
+      `Error reading last update time: ${error.message}`,
+      error.stack,
+    );
   }
 
-  // Create or overwrite the time file with the current timestamp minus one day
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  writeCurrentUpdateTime(oneDayAgo); // Call to create the file with this time
-  return oneDayAgo; // Return the default time
+  const defaultTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  logger.log(`Creating file with default time: ${defaultTime}`);
+  writeCurrentUpdateTime(defaultTime, logger);
+  return defaultTime; // Return the default time
 }
 
 // Function to write the current update time to the file
-export function writeCurrentUpdateTime(currentTime: string): void {
+export function writeCurrentUpdateTime(
+  currentTime: string,
+  logger: MyLogger,
+): void {
+  const jsonData = JSON.stringify({ lastUpdateTime: currentTime }, null, 2);
+
   try {
-    fs.writeFileSync(TIME_FILE_PATH, currentTime, 'utf-8');
+    logger.log(
+      `Writing current update time to ${TIME_FILE_PATH}: ${currentTime}...`,
+    );
+    fs.writeFileSync(TIME_FILE_PATH, jsonData, 'utf-8');
+    logger.log(`Successfully wrote current update time: ${currentTime}`);
   } catch (error) {
-    console.error(`Error writing current update time: ${error}`);
+    logger.error(
+      `Error writing current update time: ${error.message}`,
+      error.stack,
+    );
   }
 }

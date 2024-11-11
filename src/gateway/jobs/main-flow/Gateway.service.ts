@@ -11,7 +11,7 @@ import {
   countryCodeMap,
   updateItemsAndPromos,
   writeCurrentUpdateTime,
-  readLastUpdateTime
+  readLastUpdateTime,
 } from 'src/codcod/helpers/helpers';
 
 @Injectable()
@@ -25,13 +25,12 @@ export class GatewayService {
     private readonly configService: ConfigService,
   ) {
     this.storeId = this.configService.get<string>('STORE_ID');
-
   }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async processUpdates(): Promise<void> {
     const currentTime = new Date().toISOString();
-    const lastUpdateTime = readLastUpdateTime();
+    const lastUpdateTime = readLastUpdateTime(this.logger);
     const updatedTime = addHoursToUtcTime(lastUpdateTime, 2);
 
     this.logger.log(`Processing updates since ${updatedTime}`);
@@ -46,14 +45,21 @@ export class GatewayService {
         this.storeId,
       );
 
-      const codcodItems = { Items: codcodItemsResponse }; 
-      const codcodPromos = { promos: codcodPromosResponse }; 
+      const codcodItems = { Items: codcodItemsResponse };
+      const codcodPromos = { promos: codcodPromosResponse };
+
+      this.logger.log('codcodItems: ' + JSON.stringify(codcodItems, null, 2));
 
       const existingItems = await this.pricerService.getAllItemIds();
       const existingItemIds = new Set(existingItems.map((item) => item.itemId));
 
-      await updateItemsAndPromos(codcodItems, codcodPromos, existingItemIds, this.pricerService.updateItem.bind(this.pricerService), this.logger);
-
+      await updateItemsAndPromos(
+        codcodItems,
+        codcodPromos,
+        existingItemIds,
+        this.pricerService.updateItem.bind(this.pricerService),
+        this.logger,
+      );
 
       const allLabels = await this.pricerService.getAllLabelsInStore();
 
@@ -81,8 +87,7 @@ export class GatewayService {
       ]);
 
       this.logger.log('Processing completed.');
-      writeCurrentUpdateTime(currentTime);
-
+      writeCurrentUpdateTime(currentTime, this.logger);
     } catch (error) {
       this.logger.error('Error processing updates:', error.stack);
     }
