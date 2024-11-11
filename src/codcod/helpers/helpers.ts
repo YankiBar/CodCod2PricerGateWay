@@ -1,4 +1,8 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { MyLogger } from 'src/logger';
+
+const TIME_FILE_PATH = path.join(__dirname, '../../time.txt' )
 
 export function addHoursToUtcTime(
   originalTime: string,
@@ -153,5 +157,33 @@ export async function updateItemsAndPromos(
   } catch (error) {
     logger.error('Error updating items or promos:', error);
     // You may choose to log specific failures or handle them differently here
+  }
+}
+
+ // Function to read the last update time from the file
+export function readLastUpdateTime(): string {
+  try {
+    if (fs.existsSync(TIME_FILE_PATH)) {
+      const timeData = fs.readFileSync(TIME_FILE_PATH, 'utf-8').trim();
+     if (timeData) {
+        return timeData; 
+      }
+    }
+  } catch (error) {
+    console.error(`Error reading last update time: ${error}`);
+  }
+
+  // Create or overwrite the time file with the current timestamp minus one day
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  writeCurrentUpdateTime(oneDayAgo); // Call to create the file with this time
+  return oneDayAgo; // Return the default time
+}
+
+// Function to write the current update time to the file
+export function writeCurrentUpdateTime(currentTime: string): void {
+  try {
+    fs.writeFileSync(TIME_FILE_PATH, currentTime, 'utf-8');
+  } catch (error) {
+    console.error(`Error writing current update time: ${error}`);
   }
 }

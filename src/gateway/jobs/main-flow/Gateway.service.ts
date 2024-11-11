@@ -10,6 +10,8 @@ import {
   getMatchingLabels,
   countryCodeMap,
   updateItemsAndPromos,
+  writeCurrentUpdateTime,
+  readLastUpdateTime
 } from 'src/codcod/helpers/helpers';
 
 @Injectable()
@@ -23,11 +25,13 @@ export class GatewayService {
     private readonly configService: ConfigService,
   ) {
     this.storeId = this.configService.get<string>('STORE_ID');
+
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processUpdates(): Promise<void> {
-    const lastUpdateTime = new Date().toISOString();
+    const currentTime = new Date().toISOString();
+    const lastUpdateTime = readLastUpdateTime();
     const updatedTime = addHoursToUtcTime(lastUpdateTime, 2);
 
     this.logger.log(`Processing updates since ${updatedTime}`);
@@ -42,16 +46,8 @@ export class GatewayService {
         this.storeId,
       );
 
-      // Wrap in objects as defined expected input for getMatchingLabels
-      const codcodItems = { Items: codcodItemsResponse }; // Wrap as an object
-      const codcodPromos = { promos: codcodPromosResponse }; // Wrap as an object
-
-      // this.logger.log(
-      //   'Fetched Codcod Items: ' + JSON.stringify(codcodItems, null, 2),
-      // );
-      // this.logger.log(
-      //   'Fetched Codcod Promos: ' + JSON.stringify(codcodPromos, null, 2),
-      // );
+      const codcodItems = { Items: codcodItemsResponse }; 
+      const codcodPromos = { promos: codcodPromosResponse }; 
 
       const existingItems = await this.pricerService.getAllItemIds();
       const existingItemIds = new Set(existingItems.map((item) => item.itemId));
@@ -85,6 +81,8 @@ export class GatewayService {
       ]);
 
       this.logger.log('Processing completed.');
+      writeCurrentUpdateTime(currentTime);
+
     } catch (error) {
       this.logger.error('Error processing updates:', error.stack);
     }
