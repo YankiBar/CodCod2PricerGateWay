@@ -33,15 +33,11 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
 
-      if (responseData?.data) {
-        // Log the items for debugging purposes
-        // responseData.data.Items.forEach((item: any, index: number) => {
-        //   this.logger.log(`Branch Item ${index}: ${JSON.stringify(item, null, 2)}`);
-        // });
-        return responseData.data; // Change to return responseData.data.Items
+      if (responseData?.data?.Items) {
+        return responseData.data.Items;
       } else {
-        this.logger.warn('No branch items were found in the response.');
-        return [];
+        this.logger.warn('No branch promos were found in the response.');
+        return  [] ; // Return an object with an empty promos array
       }
     } catch (error: any) {
       this.logger.error(
@@ -52,7 +48,7 @@ export class CodcodService {
     }
   }
 
-  async getAllBranchPromos(storeId: string): Promise<any[]> {
+  async getAllBranchPromos(storeId: string): Promise<any[]>  {
     const url = `${this.ContentBaseURL}/getPromosA`;
     try {
       const response = await firstValueFrom(
@@ -65,11 +61,11 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
 
-      if (responseData?.data) {
-        return responseData.data; 
+      if (responseData?.data?.promos) {
+        return responseData.data.promos;
       } else {
         this.logger.warn('No branch promos were found in the response.');
-        return [];
+        return  [] ; // Return an object with an empty promos array
       }
     } catch (error: any) {
       this.logger.error(
@@ -92,14 +88,11 @@ export class CodcodService {
       const responseData = JSON.parse(
         Buffer.from(response.data).toString('utf-8'),
       );
-      if (responseData?.data) {
-        // responseData.data.Items.forEach((item: any, index: number) => {
-        //   this.logger.log(`Item ${index}:  ` + JSON.stringify(item, null, 2));
-        // });
-        return responseData.data;
+      if (responseData?.data?.Items) {
+        return responseData.data.Items;
       } else {
-        this.logger.warn('No Items were found in the response.');
-        return [];
+        this.logger.warn('No branch promos were found in the response.');
+        return  [] ; // Return an object with an empty promos array
       }
     } catch (error: any) {
       this.logger.error(
@@ -113,27 +106,26 @@ export class CodcodService {
   async getUpdatedPromos(
     lastUpdateTime: string,
     StoreID: string,
-  ): Promise<any> {
+  ): Promise<any>{
+    // Specify the expected return type as an object
     const url = `${this.ContentBaseURL}/getUpdatedPromosA`;
     try {
       const response = await firstValueFrom(
-        this.httpService.get(url, {
-          params: { dt: lastUpdateTime, StoreID },
-          responseType: 'arraybuffer',
-        }),
-      );
-      const responseData = JSON.parse(
-        Buffer.from(response.data).toString('utf-8'),
-      );
-      // Log each item in the Items array
-      if (responseData?.data) {
-        // responseData.data.Items.forEach((item: any, index: number) => {
-        //   this.logger.log(`Item ${index}: ` + JSON.stringify(item, null, 2));
-        // });
-        return responseData.data;
-      } else {
-        this.logger.warn('No Promos were found in the response.');
-      }
+          this.httpService.get(url, {
+            params: { StoreID },
+            responseType: 'arraybuffer',
+          }),
+        );
+        const responseData = JSON.parse(
+          Buffer.from(response.data).toString('utf-8'),
+        );
+  
+        if (responseData?.data?.promos) {
+          return responseData.data.promos;
+        } else {
+          this.logger.warn('No branch promos were found in the response.');
+          return  [] ; // Return an object with an empty promos array
+        }
     } catch (error: any) {
       this.logger.error(
         `Error fetching Updated Promos: ${error.message}`,

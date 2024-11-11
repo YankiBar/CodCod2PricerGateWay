@@ -72,16 +72,16 @@ export class PricerService {
     }
   }
 
-    // New method to patch item details
   async updateItem(itemId: string, itemName: string): Promise<void> {
     const url = this.constructUrl('items');
-    const payload = [{
-      itemId: itemId,
-      itemName: itemName
-    }];
+    const payload = [{ itemId, itemName }]; // Use shorthand for constructing the payload
+
+    this.logger.log(
+      `Attempting to update item with ID: ${itemId} and Name: ${itemName}`,
+    );
 
     try {
-      await firstValueFrom(
+      const response = await firstValueFrom(
         this.httpService.patch(url, payload, {
           headers: {
             Accept: '*/*',
@@ -90,10 +90,29 @@ export class PricerService {
           ...this.createAuthHeaders(),
         }),
       );
-      this.logger.log(`Updated item with ID: ${itemId}`);
+
+      this.logger.log(
+        `Successfully updated item with ID: ${itemId}. Response: ${JSON.stringify(response.data)}`,
+      ); 
     } catch (error) {
-      this.logger.error(`Error updating item: ${error.message}`, error.stack);
-      throw error;
+      if (error.response) {
+        this.logger.error(
+          `Failed to update item with ID: ${itemId}. Server responded with status: ${error.response.status} and data: ${JSON.stringify(error.response.data)}`,
+          error.stack,
+        );
+      } else if (error.request) {
+        this.logger.error(
+          `No response received while updating item with ID: ${itemId}. Request details: ${JSON.stringify(error.request)}`,
+          error.stack,
+        );
+      } else {
+        this.logger.error(
+          `Error in updating item with ID: ${itemId}. Message: ${error.message}`,
+          error.stack,
+        );
+      }
+
+      throw error; 
     }
   }
 
@@ -101,44 +120,44 @@ export class PricerService {
     const allItems: any[] = [];
     let start = 0;
     const limit = this.defaultLimit;
-  
+
     try {
       while (true) {
         const response = await this.fetchItems(start, limit); // New fetch method for items
-  
+
         // Check if the response is valid and is an array
         if (!response || !Array.isArray(response)) {
           this.logger.warn('No items found in response.');
           break; // Exit if there are no valid items
         }
-  
+
         // Append fetched items to the allItems array
         allItems.push(...response);
-  
-        this.logger.log(`Fetched ${response.length} items, total collected: ${allItems.length}`);
-  
+
         // If the number of items fetched is less than the limit, stop fetching
         if (response.length < limit) {
           this.logger.log('No more items to fetch, completing the operation.');
+          this.logger.log(
+            `Fetched ${response.length} items, total collected: ${allItems.length}`,
+          );
           break;
         }
-  
+
         // Increment the start position for pagination
         start += limit;
       }
-  
+
       return allItems;
     } catch (error: any) {
       this.logger.error('Error fetching all item IDs:', error.stack);
       throw new Error('Failed to fetch all item IDs.');
     }
   }
-  
+
   // New helper method to fetch items with pagination
   private async fetchItems(start: number, limit: number): Promise<any[]> {
     const url = this.constructUrl('items');
-    this.logger.log(`Fetching items from ${url} with start=${start}, limit=${limit}`);
-  
+
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -149,10 +168,13 @@ export class PricerService {
           ...this.createAuthHeaders(),
         }),
       );
-  
+
       return response.data; // Expected to return array of items
     } catch (error: any) {
-      this.logger.error(`Error fetching items from Pricer: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error fetching items from Pricer: ${error.message}`,
+        error.stack,
+      );
       throw new Error(`Failed to fetch items: ${error.message}`);
     }
   }

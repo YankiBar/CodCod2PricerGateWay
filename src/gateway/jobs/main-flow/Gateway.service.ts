@@ -9,6 +9,7 @@ import {
   getDesiredSize,
   getMatchingLabels,
   countryCodeMap,
+  updateItemsAndPromos,
 } from 'src/codcod/helpers/helpers';
 
 @Injectable()
@@ -32,40 +33,30 @@ export class GatewayService {
     this.logger.log(`Processing updates since ${updatedTime}`);
 
     try {
-      const codcodItems =
-        (await this.codcodService.getAllBranchItems(
-          // lastUpdateTime,
-          this.storeId,
-        )) || [];
-      const codcodPromos =
-        (await this.codcodService.getAllBranchPromos(
-          // lastUpdateTime,
-          this.storeId,
-        )) || [];
+      const codcodItemsResponse = await this.codcodService.getUpdatedItems(
+        lastUpdateTime,
+        this.storeId,
+      );
+      const codcodPromosResponse = await this.codcodService.getUpdatedPromos(
+        lastUpdateTime,
+        this.storeId,
+      );
+
+      // Wrap in objects as defined expected input for getMatchingLabels
+      const codcodItems = { Items: codcodItemsResponse }; // Wrap as an object
+      const codcodPromos = { promos: codcodPromosResponse }; // Wrap as an object
+
+      // this.logger.log(
+      //   'Fetched Codcod Items: ' + JSON.stringify(codcodItems, null, 2),
+      // );
+      // this.logger.log(
+      //   'Fetched Codcod Promos: ' + JSON.stringify(codcodPromos, null, 2),
+      // );
 
       const existingItems = await this.pricerService.getAllItemIds();
-      const existingItemIds = new Set(existingItems.map(item => item.itemId));
+      const existingItemIds = new Set(existingItems.map((item) => item.itemId));
 
-      const updatePromises: Promise<void>[] = [];
-
-
-      // Update branch items
-      for (const item of codcodItems) {
-        if (!existingItemIds.has(item.barcode)) {
-          updatePromises.push(this.pricerService.updateItem(item.barcode, item.dsc));
-        }
-      }
-
-      // Update promos
-      for (const promo of codcodPromos) {
-        const prefixedPromoId = `P${promo.promonum}`;
-        if (!existingItemIds.has(prefixedPromoId)) {
-          updatePromises.push(this.pricerService.updateItem(prefixedPromoId, promo.dsc));
-        }
-      }
-
-      // Wait for all updates to complete
-      await Promise.all(updatePromises);
+      await updateItemsAndPromos(codcodItems, codcodPromos, existingItemIds, this.pricerService.updateItem.bind(this.pricerService), this.logger);
 
 
       const allLabels = await this.pricerService.getAllLabelsInStore();

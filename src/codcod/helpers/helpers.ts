@@ -1,3 +1,5 @@
+import { MyLogger } from 'src/logger';
+
 export function addHoursToUtcTime(
   originalTime: string,
   hoursToAdd: number,
@@ -22,17 +24,22 @@ export function getDesiredSize(modelName: string): string {
   return sizes[modelName] || sizes.default;
 }
 
-export function getMatchingLabels(codcod: any, pricer: any, logger: any) {
+export function getMatchingLabels(
+  codcod: { Items?: any[]; promos?: any[] },
+  pricer: any,
+  logger: any,
+) {
   // Extract and sanitize itemSet from `Codcod` data
   let itemSet: Set<string>;
-  if (codcod.Items) {
-    // Create a set of item barcodes from Codcod
+  // Determine if codcod has Items or promos and extract accordingly
+  if (codcod.Items && Array.isArray(codcod.Items)) {
+    // Create a set of item barcodes from Codcod Items
     itemSet = new Set(
-      codcod.Items.map((item: { barcode: string }) =>
-        item.barcode.replace(/^1?/, ''),
+      codcod.Items.map(
+        (item: { barcode: string }) => item.barcode, // Remove the replacement logic for prefix '1' as you specified
       ),
     );
-  } else if (codcod.promos) {
+  } else if (codcod.promos && Array.isArray(codcod.promos)) {
     // Create a set of promo numbers from Codcod, removing prefixed '1'
     itemSet = new Set(
       codcod.promos.map((promo: { promonum: string }) =>
@@ -95,3 +102,56 @@ export const countryCodeMap = {
   קנדה: 'CA',
   קניה: 'KE',
 };
+
+
+export async function updateItemsAndPromos(
+  codcodItems: { Items: any[] },
+  codcodPromos: { promos: any[] },
+  existingItemIds: Set<string>,
+  updateItemFunction: (id: string, dsc: string) => Promise<void>,
+  logger: MyLogger,
+): Promise<void> {
+  const updatePromises: Promise<void>[] = [];
+
+  // Ensure there's an entry for items
+  if (codcodItems.Items && codcodItems.Items.length > 0) {
+    logger.log(`Starting updates for ${codcodItems.Items.length} branch items.`);
+    
+    // Update branch items
+    for (const item of codcodItems.Items) {
+      if (!existingItemIds.has(item.barcode)) {
+        logger.log(`Preparing to update item with barcode: ${item.barcode}`); // Log item being processed
+        updatePromises.push(updateItemFunction(item.barcode, item.dsc));
+      }
+    }
+  } else {
+    logger.warn('No branch items to update.');
+  }
+
+  // Ensure there's an entry for promos
+  if (codcodPromos.promos && codcodPromos.promos.length > 0) {
+    logger.log(`Starting updates for ${codcodPromos.promos.length} promos.`);
+    
+    // Update promos
+    for (const promo of codcodPromos.promos) {
+      const prefixedPromoId = `P${promo.promonum}`;
+      if (!existingItemIds.has(prefixedPromoId)) {
+        logger.log(`Preparing to update promo with id: ${prefixedPromoId}`); // Log promo being processed
+        updatePromises.push(updateItemFunction(prefixedPromoId, promo.dsc));
+      } else {
+        logger.log(`Promo with id: ${prefixedPromoId} already exists, skipping update.`);
+      }
+    }
+  } else {
+    logger.warn('No promos to update.');
+  }
+
+  // Wait for all updates to complete
+  try {
+    await Promise.all(updatePromises);
+    logger.log(`All updates completed. Total updates made: ${updatePromises.length}`);
+  } catch (error) {
+    logger.error('Error updating items or promos:', error);
+    // You may choose to log specific failures or handle them differently here
+  }
+}
