@@ -89,7 +89,6 @@ export class CodcodService {
         Buffer.from(response.data).toString('utf-8'),
       );
       if (responseData?.data?.Items) {
-        console.log(response.data.Items)
         return responseData.data.Items;
       } else {
         this.logger.warn('No branch promos were found in the response.');

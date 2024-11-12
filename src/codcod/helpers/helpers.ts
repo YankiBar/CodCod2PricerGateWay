@@ -126,10 +126,6 @@ export async function updateItemsAndPromos(
       if (!existingItemIds.has(item.barcode)) {
         logger.log(`Preparing to update item with barcode: ${item.barcode}`); // Log item being processed
         updatePromises.push(updateItemFunction(item.barcode, item.dsc));
-      } else {
-        logger.log(
-          `Item with barcode: ${item.barcode} already exists, skipping update.`,
-        );
       }
     }
   } else {
@@ -173,11 +169,8 @@ const TIME_FILE_PATH = path.join(__dirname, '../../time.json');
 
 // Function to read the last update time from the file
 export function readLastUpdateTime(logger: MyLogger): string {
-  logger.log(`Attempting to read last update time from ${TIME_FILE_PATH}...`);
-
   try {
     if (fs.existsSync(TIME_FILE_PATH)) {
-      logger.log(`File ${TIME_FILE_PATH} exists. Attempting to read...`);
       const data = fs.readFileSync(TIME_FILE_PATH, 'utf-8').trim();
 
       if (data) {
@@ -213,11 +206,7 @@ export function writeCurrentUpdateTime(
   const jsonData = JSON.stringify({ lastUpdateTime: currentTime }, null, 2);
 
   try {
-    logger.log(
-      `Writing current update time to ${TIME_FILE_PATH}: ${currentTime}...`,
-    );
     fs.writeFileSync(TIME_FILE_PATH, jsonData, 'utf-8');
-    logger.log(`Successfully wrote current update time: ${currentTime}`);
   } catch (error) {
     logger.error(
       `Error writing current update time: ${error.message}`,
