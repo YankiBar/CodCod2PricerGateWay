@@ -35,3 +35,122 @@ To set up the project locally, follow these steps:
    ```bash
    git clone <repository-url>
    cd <repository-directory>
+2.  **Install dependencies**:
+
+> bash
+>
+> Copy
+>
+> npm install
+
+3.  **Set up environment variables**: Copy the .env.example
+    configuration file to .env and fill in the required environment
+    variables.
+
+**Usage**
+
+To start the application, run:
+
+bash
+
+Copy
+
+npm run start
+
+You can start the application in watch mode during development:
+
+bash
+
+Copy
+
+npm run start:dev
+
+The API will be available at http://localhost:3000.
+
+**Configuration**
+
+Configure the necessary API endpoints and credentials in the .env file:
+
+dotenv
+
+Copy
+
+CODCOD_CONTENT_URL=\<Your_Codcod_Content_URL\>
+
+CODCOD_MEDIA_URL=\<Your_Codcod_Media_URL\>
+
+STORE_ID=\<Your_Store_ID\>
+
+PRICER_API_URL=\<Your_Pricer_API_URL\>
+
+PRICER_USERNAME=\<Your_Pricer_Username\>
+
+PRICER_PASSWORD=\<Your_Pricer_Password\>
+
+**Services Overview**
+
+**CodcodService**
+
+The CodcodService is responsible for interacting with the Codcod APIs to
+retrieve branch items, promotions, and dynamic signs.
+
+-   **Methods**:
+
+    -   getAllBranchItems(storeId: string): Fetches all branch items for
+        the given store ID.
+
+    -   getAllBranchPromos(storeId: string): Retrieves all branch
+        promotions.
+
+    -   getUpdatedItems(lastUpdateTime: string, StoreID: string): Gets
+        items updated since the last given timestamp.
+
+    -   getItemSign(itemId: string, size: string): Fetches a sign for a
+        specific item.
+
+**PricerService**
+
+The PricerService manages interactions with the pricing API, handling
+operations such as updating items, fetching labels, and managing images.
+
+-   **Methods**:
+
+    -   updateItem(itemId: string, itemName: string): Updates the
+        item\'s name.
+
+    -   fetchOriginalCountry(itemId: string): Fetches the original
+        country of a specific item.
+
+    -   getAllItemIds(): Retrieves all item IDs from the pricer service.
+
+**GatewayService**
+
+The GatewayService orchestrates the flow of data between the Codcod and
+Pricer services. It uses cron jobs to periodically fetch updates and
+manage images for items and promotions.
+
+-   **Methods**:
+
+    -   processUpdates(): Reads updates from the Codcod API and
+        processes items and promotions.
+
+    -   processImages(itemIds: { itemId: string; modelName: string
+        }\[\]): Updates images for specified items based on country
+        codes.
+
+**Logging**
+
+Custom logging is achieved using the MyLogger service, which provides
+structured logs throughout the application, recording significant events
+and errors.
+
+**Contributing**
+
+Contributions are welcome! Please open an issue or submit a pull request
+for any changes or improvements you would like to see.
+
+**License**
+
+This project is licensed under the MIT License. See the
+[[LICENSE]{.underline}](https://chat.chatbotapp.ai/chats/LICENSE) file
+for more details.
