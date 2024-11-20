@@ -12,7 +12,7 @@ import {
   updateItemsAndPromos,
   writeCurrentUpdateTime,
   readLastUpdateTime,
-} from 'src/codcod/helpers/helpers';
+} from 'src/helpers/helpers';
 
 @Injectable()
 export class GatewayService {
