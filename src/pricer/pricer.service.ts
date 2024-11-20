@@ -11,7 +11,7 @@ export class PricerService {
   private readonly baseURL: string;
   private readonly username: string;
   private readonly password: string;
-  private readonly projection = 'M';
+  private readonly projection = 'L';
   private readonly defaultLimit: number = 500;
 
   constructor(
