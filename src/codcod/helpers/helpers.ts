@@ -122,9 +122,9 @@ export async function updateItemsAndPromos(
 
     // Update branch items
     for (const item of codcodItems.Items) {
-      logger.log(`Checking item with barcode: ${item.barcode}`);
+      // logger.log(`Checking item with barcode: ${item.barcode}`);
       if (!existingItemIds.has(item.barcode)) {
-        logger.log(`Preparing to update item with barcode: ${item.barcode}`); // Log item being processed
+        // logger.log(`Preparing to update item with barcode: ${item.barcode}`); // Log item being processed
         updatePromises.push(updateItemFunction(item.barcode, item.dsc));
       }
     }
@@ -139,9 +139,9 @@ export async function updateItemsAndPromos(
     // Update promos
     for (const promo of codcodPromos.promos) {
       const prefixedPromoId = `P${promo.promonum}`;
-      logger.log(`Checking promo with ID: ${prefixedPromoId}`);
+      // logger.log(`Checking promo with ID: ${prefixedPromoId}`);
       if (!existingItemIds.has(prefixedPromoId)) {
-        logger.log(`Preparing to update promo with ID: ${prefixedPromoId}`); // Log promo being processed
+        // logger.log(`Preparing to update promo with ID: ${prefixedPromoId}`); // Log promo being processed
         updatePromises.push(updateItemFunction(prefixedPromoId, promo.dsc));
       } else {
         logger.log(

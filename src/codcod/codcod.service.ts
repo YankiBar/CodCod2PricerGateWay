@@ -36,7 +36,7 @@ export class CodcodService {
       if (responseData?.data?.Items) {
         return responseData.data.Items;
       } else {
-        this.logger.warn('No branch promos were found in the response.');
+        this.logger.warn('No branch items were found in the response.');
         return  [] ; // Return an object with an empty promos array
       }
     } catch (error: any) {
@@ -112,7 +112,7 @@ export class CodcodService {
     try {
       const response = await firstValueFrom(
           this.httpService.get(url, {
-            params: { StoreID },
+            params: { dt: lastUpdateTime, StoreID },
             responseType: 'arraybuffer',
           }),
         );
