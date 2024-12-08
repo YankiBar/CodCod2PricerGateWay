@@ -48,7 +48,7 @@ export class GatewayService {
       const codcodItems = { Items: codcodItemsResponse };
       const codcodPromos = { promos: codcodPromosResponse };
 
-      this.logger.log('codcodItems: ' + JSON.stringify(codcodItems, null, 2));
+      // this.logger.log('codcodItems: ' + JSON.stringify(codcodItems, null, 2));
 
       const existingItems = await this.pricerService.getAllItemIds();
       const existingItemIds = new Set(existingItems.map((item) => item.itemId));
