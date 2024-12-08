@@ -5,6 +5,7 @@ import { CodcodModule } from './codcod/codcod.module';
 import { PricerModule } from './pricer/pricer.module';
 import { JobsModule } from './gateway/jobs/jobs.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { LabelMonitorService } from './label-monitor/label-monitor.service';
 
 @Module({
   imports: [
@@ -19,5 +20,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     CodcodModule,
     PricerModule,
   ],
+  providers: [LabelMonitorService],
 })
 export class AppModule {}
