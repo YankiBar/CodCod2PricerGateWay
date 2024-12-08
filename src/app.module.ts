@@ -22,7 +22,6 @@ import { GatewayService } from './gateway/jobs/main-flow/Gateway.service';
     PricerModule,
   ],
   providers: [LabelMonitorService, GatewayService],
-  exports: [GatewayService], 
 
 })
 export class AppModule {}

@@ -6,6 +6,6 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [CodcodModule, PricerModule, ConfigModule],
-  providers: [GatewayService]
+  providers: []
 })
 export class JobsModule {}
