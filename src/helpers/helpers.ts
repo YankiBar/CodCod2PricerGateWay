@@ -165,7 +165,7 @@ export async function updateItemsAndPromos(
 }
 
 // Function to read the last update time from the file// Define the path to the `time.json` file
-const TIME_FILE_PATH = path.join(__dirname, '../../time.json');
+const TIME_FILE_PATH = path.join(__dirname, '../.././time.json');
 
 // Function to read the last update time from the file
 export function readLastUpdateTime(logger: MyLogger): string {

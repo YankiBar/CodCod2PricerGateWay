@@ -43,8 +43,8 @@ export class GatewayService {
     this.logger.log(`Processing updates since ${updatedTime}`);
 
     try {
-      const codcodItemsResponse = await this.codcodService.getAllBranchItems(
-        // lastUpdateTime,
+      const codcodItemsResponse = await this.codcodService.getUpdatedItems(
+        lastUpdateTime,
         this.storeId,
       );
       const codcodPromosResponse = await this.codcodService.getUpdatedPromos(
