@@ -107,7 +107,7 @@ export class GatewayService {
   ): Promise<void> {
     for (const { itemId, modelName } of itemIds) {
       const size = getDesiredSize(modelName);
-      let fetchId = itemId.startsWith('P') ? 'P1' + itemId.slice(1) : itemId;
+      let fetchId = itemId;
 
       try {
         const { OriginalCountry1, OriginalCountry2 } =
