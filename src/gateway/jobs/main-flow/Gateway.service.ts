@@ -18,6 +18,7 @@ import {
 export class GatewayService {
   private readonly logger = new MyLogger();
   private readonly storeId: string;
+  private isProcessing: boolean = false;
 
   constructor(
     private readonly codcodService: CodcodService,
@@ -29,6 +30,12 @@ export class GatewayService {
 
   @Cron(CronExpression.EVERY_10_MINUTES)
   async processUpdates(): Promise<void> {
+    if (this.isProcessing) {
+      this.logger.warn('Process already running, skipping this cycle.');
+      return; // Exit early if a process is already ongoing
+    }
+
+    this.isProcessing = true;
     const currentTime = new Date().toISOString();
     const lastUpdateTime = readLastUpdateTime(this.logger);
     const updatedTime = addHoursToUtcTime(lastUpdateTime, 2);
@@ -36,8 +43,8 @@ export class GatewayService {
     this.logger.log(`Processing updates since ${updatedTime}`);
 
     try {
-      const codcodItemsResponse = await this.codcodService.getUpdatedItems(
-        lastUpdateTime,
+      const codcodItemsResponse = await this.codcodService.getAllBranchItems(
+        // lastUpdateTime,
         this.storeId,
       );
       const codcodPromosResponse = await this.codcodService.getUpdatedPromos(
@@ -90,6 +97,8 @@ export class GatewayService {
       writeCurrentUpdateTime(currentTime, this.logger);
     } catch (error) {
       this.logger.error('Error processing updates:', error.stack);
+    } finally {
+      this.isProcessing = false; 
     }
   }
 

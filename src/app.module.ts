@@ -6,6 +6,7 @@ import { PricerModule } from './pricer/pricer.module';
 import { JobsModule } from './gateway/jobs/jobs.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LabelMonitorService } from './label-monitor/label-monitor.service';
+import { GatewayService } from './gateway/jobs/main-flow/Gateway.service';
 
 @Module({
   imports: [
@@ -20,6 +21,8 @@ import { LabelMonitorService } from './label-monitor/label-monitor.service';
     CodcodModule,
     PricerModule,
   ],
-  providers: [LabelMonitorService],
+  providers: [LabelMonitorService, GatewayService],
+  exports: [GatewayService], 
+
 })
 export class AppModule {}

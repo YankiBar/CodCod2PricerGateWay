@@ -135,8 +135,7 @@ export class PricerService {
         allItems.push(...response);
 
         // If the number of items fetched is less than the limit, stop fetching
-        if (response.length < limit) {
-          this.logger.log('No more items to fetch, completing the operation.');
+        if (response.length < limit) {       
           this.logger.log(
             `Fetched ${response.length} items, total collected: ${allItems.length}`,
           );
@@ -186,9 +185,6 @@ export class PricerService {
     serializeDatesToIso8601: boolean,
   ): Promise<any> {
     const url = this.constructUrl('labels');
-    this.logger.log(
-      `Fetching labels from ${url} with start=${start}, limit=${limit}`,
-    );
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -237,7 +233,6 @@ export class PricerService {
 
         // If the number of labels fetched is less than the limit, stop fetching
         if (response.length < limit) {
-          this.logger.log('No more labels to fetch, completing the operation.');
           break;
         }
 
